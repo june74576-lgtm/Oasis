@@ -42,7 +42,7 @@ Sin frameworks, sin bundler, sin build step. Se abre directamente en el navegado
 
 ---
 
-> Los archivos `data/*.js` actúan como **fallback local**: si Supabase está configurado y tiene los datos en la tabla `config`, esos sobrescriben a los locales.
+Los archivos `data/*.js` actúan como **fallback local**: si Supabase está configurado y tiene los datos en la tabla `config`, esos sobrescriben a los locales.
 
 ---
 
