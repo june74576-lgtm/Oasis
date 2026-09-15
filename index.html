@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,11 +12,9 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400&display=swap" rel="stylesheet">
 
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="data/supabase-config.js?v=3"></script>
 
-    <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 <base target="_blank">
 </head>
@@ -29,7 +27,7 @@
         </div>
 
         <div class="auth" id="authArea">
-            <button class="btn-filled small" id="loginBtn">Iniciar sesión</button>
+            <button class="btn-filled small" id="loginBtn">Sign in</button>
 
             <div class="user-chip" id="userChip" style="display:none;">
                 <button class="user-chip-btn" id="userChipBtn">
@@ -41,19 +39,19 @@
                 <div class="user-menu" id="userMenu">
                     <button id="userMenuPerfil" class="user-menu-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 19.5c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
-                        Perfil
+                        Profile
                     </button>
                     <button id="userMenuConectar" class="user-menu-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/></svg>
-                        Conectar cuenta de Google
+                        Connect Google account
                     </button>
                     <button id="userMenuAdmin" class="user-menu-item" style="display:none;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"/></svg>
-                        Administrar
+                        Admin
                     </button>
                     <button id="userMenuLogout" class="user-menu-item danger">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
-                        Cerrar sesión
+                        Sign out
                     </button>
                 </div>
             </div>
@@ -61,57 +59,47 @@
     </div>
 </header>
 
-<section class="hero">
-    <div class="glow glow-1"></div>
-    <div class="glow glow-2"></div>
-
-    <div class="app-card">
-<div class="logomark">
-    <img src="logo.png" alt="OASIS" draggable="false">
-</div>
-        <h1>OASIS</h1>
-        <p class="tagline">Segundo Bachillerato · Cursos</p>
-    </div>
-</section>
-
-<!-- Cursos -->
-<section class="cards-section" id="cards">
-    <div class="carousel-container">
-        <button class="nav-btn prev-btn" id="coursesPrevBtn" aria-label="Anterior">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+<!-- ===== Side drawer: courses ===== -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<aside class="drawer" id="drawer">
+    <div class="drawer-header">
+        <span class="drawer-title">Courses</span>
+        <div class="drawer-user" id="drawerUser" style="display:none;">
+            <button class="drawer-user-btn" id="drawerUserBtn">
+                <span class="drawer-user-avatar" id="drawerUserAvatar"></span>
+                <span class="drawer-user-name" id="drawerUserName"></span>
+            </button>
+            <div class="drawer-user-menu" id="drawerUserMenu">
+                <button class="drawer-user-menu-item danger" id="drawerSignOutBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
+                    Sign out
+                </button>
+            </div>
+        </div>
+        <button class="drawer-close" id="drawerClose" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 6l12 12M18 6 6 18"/>
+            </svg>
         </button>
-        <div class="cards" id="coursesTrack"></div>
-        <button class="nav-btn next-btn" id="coursesNextBtn" aria-label="Siguiente">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
     </div>
-</section>
+    <nav class="drawer-courses" id="drawerCourses"></nav>
+    <div class="drawer-footer" id="drawerFooter">
+        <button class="drawer-signin-btn" id="drawerSignInBtn">Sign in</button>
+    </div>
+</aside>
 
-<section class="about" id="about">
-    <h2>¿ENCONTRASTE ALGÚN ERROR?</h2>
-    <div class="divider-pill"></div>
-    <p>¿Encontraste algún error o falta información? Escríbeme por WhatsApp y lo corregiré lo antes posible. Si quieres que tu curso forme parte de OASIS, también puedes contactarme. ^^</p>
-    <button class="phone-chip" id="phoneChip" type="button" aria-label="Copiar número de teléfono">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A16 16 0 0 1 5 6.1 1.5 1.5 0 0 1 6.5 3.5Z"/></svg>
-        <span id="phoneChipText">+593 98 027 1168</span>
-    </button>
-</section>
-
-<footer>
-    <p>Hecho con ❤︎ por Juan Quichimbo.</p>
-</footer>
-
-<!-- Curso a pantalla completa -->
-<div class="course-fullscreen" id="courseFullscreen">
+<!-- ===== Course fullscreen (main view) ===== -->
+<div class="course-fullscreen active" id="courseFullscreen">
     <div class="fs-topbar" id="fsTopbar">
-        <button class="fs-back" id="fsClose" aria-label="Volver">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        <button class="fs-menu" id="fsMenuBtn" aria-label="Course menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
         </button>
-        <span class="fs-topbar-title" id="fsTopbarTitle">Nombre del curso</span>
+        <span class="fs-topbar-title" id="fsTopbarTitle">Loading…</span>
     </div>
 
     <div class="fs-body">
-        <!-- Tutor -->
         <section class="fs-section">
             <div class="fs-section-header">
                 <h2>Tutor</h2>
@@ -120,55 +108,52 @@
             <div class="tutor-row" id="tutorCard"></div>
         </section>
 
-        <!-- Horario -->
         <section class="fs-section">
             <div class="fs-section-header">
-                <h2>Horario</h2>
+                <h2>Schedule</h2>
                 <div class="divider-pill"></div>
             </div>
             <div class="horario-wrapper">
                 <table class="horario" id="horarioTable">
                     <thead>
                         <tr>
-                            <th>Hora</th>
-                            <th class="day-header-clickable" data-day="Lunes">Lunes</th>
-                            <th class="day-header-clickable" data-day="Martes">Martes</th>
-                            <th class="day-header-clickable" data-day="Miercoles">Miércoles</th>
-                            <th class="day-header-clickable" data-day="Jueves">Jueves</th>
-                            <th class="day-header-clickable" data-day="Viernes">Viernes</th>
+                            <th>Time</th>
+                            <th data-day="Monday">Monday</th>
+                            <th data-day="Tuesday">Tuesday</th>
+                            <th data-day="Wednesday">Wednesday</th>
+                            <th data-day="Thursday">Thursday</th>
+                            <th data-day="Friday">Friday</th>
                         </tr>
                     </thead>
                     <tbody id="horarioBody"></tbody>
                 </table>
                 <div class="horario-mobile" id="horarioMobile">
                     <div class="day-tabs" id="dayTabs"></div>
-                    <button class="tareas-btn" id="tareasBtn" type="button">Ver tareas</button>
+                    <button class="announcements-mobile-btn" id="openAnnouncementsMobileBtn" type="button">Announcements</button>
                     <div class="day-track" id="dayTrack"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Estudiantes -->
         <section class="fs-section">
             <div class="fs-section-header">
-                <h2>Estudiantes</h2>
+                <h2>Students</h2>
                 <div class="divider-pill"></div>
             </div>
             <div class="carousel-container">
-                <button class="nav-btn prev-btn" id="studentsPrevBtn" aria-label="Anterior">
+                <button class="nav-btn prev-btn" id="studentsPrevBtn" aria-label="Previous">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
                 <div class="cards-estudiantes" id="studentsTrack"></div>
-                <button class="nav-btn next-btn" id="studentsNextBtn" aria-label="Siguiente">
+                <button class="nav-btn next-btn" id="studentsNextBtn" aria-label="Next">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
             </div>
         </section>
 
-        <!-- Galería -->
         <section class="fs-section">
             <div class="fs-section-header">
-                <h2>Galería</h2>
+                <h2>Gallery</h2>
                 <div class="divider-pill"></div>
             </div>
             <div class="galeria-viewport">
@@ -177,41 +162,66 @@
 
             <div class="dropzone" id="galeriaDropzone" style="display:none;">
                 <input type="file" id="galeriaFileInput" accept="image/*" multiple hidden>
-                <p>Arrastra una foto aquí, o <span class="dropzone-link">haz clic</span> (máx. 10 MB c/u)</p>
+                <p>Drag a photo here, or <span class="dropzone-link">click</span> (max. 10 MB each)</p>
             </div>
-            <p class="login-hint" id="galeriaLoginHint">Inicia sesión para sumar fotos a la galería.</p>
+            <p class="login-hint" id="galeriaLoginHint">Sign in to add photos to the gallery.</p>
+        </section>
+
+        <section class="fs-section" id="announcementsSection">
+            <div class="fs-section-header">
+                <h2>Announcements</h2>
+                <div class="divider-pill"></div>
+            </div>
+            <button class="announcements-open-btn" id="openAnnouncementsBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/><path d="M8 21v-6h8v6"/></svg>
+                <span>Open announcements</span>
+                <span class="announcements-count" id="announcementsCount"></span>
+            </button>
         </section>
     </div>
 </div>
 
-<!-- Modal: estudiante -->
-<div class="mini-overlay" id="studentModalOverlay">
-    <div class="mini-modal">
-        <button class="modal-close" id="studentModalClose" aria-label="Cerrar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+<!-- Modal: student (fullscreen) -->
+<div class="mini-overlay student-overlay" id="studentModalOverlay">
+    <div class="student-fs">
+        <button class="student-fs-close" id="studentModalClose" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M6 6l12 12M18 6 6 18"/>
+            </svg>
         </button>
-        <div class="mini-photo-wrap">
-            <img id="studentModalPhoto" class="mini-photo" src="" alt="">
-            <div class="no-photo mini-photo" id="studentPhotoFallback" style="display:none;">No Photo</div>
-        </div>
-        <h3 id="studentModalName"></h3>
 
-        <div class="student-role" id="studentModalRole" style="display:none;">
-            <span id="studentModalRoleText"></span>
+        <div class="student-fs-photo">
+            <img id="studentModalPhoto" src="" alt="">
+            <div class="no-photo" id="studentPhotoFallback" style="display:none;">No Photo</div>
+            <div class="student-photo-role" id="studentModalRole" style="display:none;">
+                <span id="studentModalRoleText"></span>
+            </div>
         </div>
+        <div class="student-fs-info">
+            <h2 class="student-fs-name" id="studentModalName"></h2>
+            <p class="student-fs-birth" id="studentModalBirth"></p>
 
-        <div class="mini-details">
-            <p><span>Nacimiento</span><strong id="studentModalBirth">-</strong></p>
-            <p><span>Nivel de inglés</span><strong id="studentModalIngles">-</strong></p>
-            <p><span>Contribuciones</span><strong id="studentModalContrib">-</strong></p>
+            <div class="student-fs-details">
+                <div class="student-fs-item">
+                    <span class="student-fs-label">English level</span>
+                    <strong class="student-fs-value" id="studentModalIngles">-</strong>
+                </div>
+                <div class="student-fs-item">
+                    <span class="student-fs-label">Contributions</span>
+                    <strong class="student-fs-value" id="studentModalContrib">-</strong>
+                </div>
+            </div>
+
+            <!-- Radial chart -->
+            <div class="student-fs-radar" id="studentModalRadar"></div>
         </div>
     </div>
 </div>
 
-<!-- Modal: materia -->
+<!-- Modal: subject -->
 <div class="mini-overlay" id="materiaModalOverlay">
     <div class="mini-modal">
-        <button class="modal-close" id="materiaModalClose" aria-label="Cerrar">
+        <button class="modal-close" id="materiaModalClose" aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
         <h3 id="materiaModalNombre"></h3>
@@ -226,85 +236,83 @@
             <span id="materiaModalProfNombre"></span>
         </div>
 
-        <p class="mini-subhead">Archivos</p>
+        <p class="mini-subhead">Files</p>
         <div class="materia-archivos-list" id="materiaArchivosList"></div>
 
         <div class="dropzone" id="dropzone" style="display:none;">
             <input type="file" id="materiaFileInput" multiple hidden>
-            <p>Arrastra un archivo aquí, o <span class="dropzone-link">haz clic</span> (máx. 50 MB)</p>
+            <p>Drag a file here, or <span class="dropzone-link">click</span> (max. 50 MB)</p>
         </div>
-        <p class="login-hint" id="uploadLoginHint">Inicia sesión para subir archivos.</p>
+        <p class="login-hint" id="uploadLoginHint">Sign in to upload files.</p>
     </div>
 </div>
 
-<!-- Modal: login -->
+<!-- Modal: sign in -->
 <div class="mini-overlay" id="loginModalOverlay">
     <div class="mini-modal">
-        <button class="modal-close" id="loginModalClose" aria-label="Cerrar">
+        <button class="modal-close" id="loginModalClose" aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
-        <h3>Iniciar sesión</h3>
+        <h3>Sign in</h3>
         <div class="login-form">
-            <input type="text" id="loginUsername" placeholder="Usuario" autocomplete="username">
-            <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password">
-            <p class="login-error" id="loginError" style="display:none;">Usuario o contraseña incorrectos</p>
-            <button id="loginSubmitBtn" class="btn-filled">Entrar</button>
-            <div class="login-divider"><span>o</span></div>
+            <input type="text" id="loginUsername" placeholder="Username" autocomplete="username">
+            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+            <p class="login-error" id="loginError" style="display:none;">Wrong username or password</p>
+            <button id="loginSubmitBtn" class="btn-filled">Sign in</button>
+            <div class="login-divider"><span>or</span></div>
             <div id="googleSignInDiv" class="google-signin-wrap"></div>
         </div>
     </div>
 </div>
 
-<!-- Modal: administración -->
+<!-- Modal: admin panel -->
 <div class="mini-overlay" id="adminModalOverlay">
     <div class="mini-modal admin-modal">
-        <button class="modal-close" id="adminModalClose" aria-label="Cerrar">
+        <button class="modal-close" id="adminModalClose" aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
-        <h3>Panel de administración</h3>
+        <h3>Admin panel</h3>
         <div class="divider-pill"></div>
 
         <select id="adminDataType" class="admin-select">
-            <option value="cursos">Cursos</option>
-            <option value="estudiantes">Estudiantes</option>
-            <option value="profesores">Profesores</option>
-            <option value="materias">Materias</option>
-            <option value="horarios">Horarios</option>
+            <option value="cursos">Courses</option>
+            <option value="estudiantes">Students</option>
+            <option value="profesores">Teachers</option>
+            <option value="materias">Subjects</option>
+            <option value="horarios">Schedules</option>
         </select>
 
-        <p class="login-hint">Es JSON: las claves van entre comillas, ej. "tipo": "clase" (no tipo: "clase").</p>
+        <p class="login-hint">It's JSON: keys go in quotes, e.g. "tipo": "clase" (not tipo: "clase").</p>
 
         <textarea id="adminDataTextarea" class="admin-textarea" rows="16" spellcheck="false"></textarea>
 
         <p class="login-hint" id="adminSaveStatus"></p>
-        <button id="adminSaveBtn" class="btn-filled">Guardar cambios</button>
+        <button id="adminSaveBtn" class="btn-filled">Save changes</button>
     </div>
 </div>
-<!-- Modal: tareas -->
-<div class="mini-overlay" id="tareasModalOverlay">
-    <div class="mini-modal">
-        <button class="modal-close" id="tareasModalClose" aria-label="Cerrar">
+
+<!-- Modal: announcements (chat) -->
+<div class="mini-overlay" id="announcementsModalOverlay">
+    <div class="mini-modal announcements-modal">
+        <button class="modal-close" id="announcementsModalClose" aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
-        <h3 id="tareasModalTitulo">Tareas</h3>
+        <h3>Announcements</h3>
         <div class="divider-pill"></div>
 
-        <div class="tareas-list" id="tareasList"></div>
+        <div class="announcements-chat" id="announcementsChat"></div>
 
-        <button class="btn-filled small" id="addTareaToggle" style="display:none; margin-top:18px;">+ Agregar tarea</button>
-        <p class="login-hint" id="tareaLoginHint">Inicia sesión para agregar tareas.</p>
-
-        <div class="add-tarea-form" id="addTareaForm">
-            <select id="tareaMateria"></select>
-            <input type="text" id="tareaTitulo" placeholder="Título de la tarea" maxlength="80">
-            <textarea id="tareaDescripcion" placeholder="Descripción (opcional)" rows="3"></textarea>
-            <button id="tareaSubmitBtn" class="btn-filled">Guardar tarea</button>
+        <div class="announcements-input-wrap" id="announcementsInputWrap" style="display:none;">
+            <button class="announcements-mention-btn" id="announcementsMentionBtn" type="button" title="Mention a subject">{ }</button>
+            <textarea id="announcementsInput" placeholder="Write an announcement… use {subjectId} to mention a subject" rows="2"></textarea>
+            <button class="btn-filled small" id="announcementsSendBtn">Send</button>
         </div>
+        <p class="login-hint" id="announcementsHint">Sign in to see announcements.</p>
     </div>
 </div>
 
 <div class="image-viewer" id="imageViewer">
-    <button class="image-viewer-close" id="imageViewerClose" aria-label="Cerrar">
+    <button class="image-viewer-close" id="imageViewerClose" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M6 6l12 12M18 6 6 18"/>
         </svg>
@@ -312,13 +320,14 @@
 
     <img id="imageViewerImg" src="" alt="">
 </div>
-<!-- Datos locales -->
+
 <script src="data/cursos.js?v=5"></script>
 <script src="data/profesores.js?v=4"></script>
 <script src="data/materias.js?v=5"></script>
 <script src="data/horarios.js?v=4"></script>
 <script src="data/galeria.js?v=4"></script>
 <script src="data/estudiantes.js?v=4"></script>
-<script src="script.js?v=6"></script>
+<script src="script.js?v=8"></script>
+<script src="data/notas.js?v=1"></script>
 </body>
 </html>
