@@ -1,14 +1,7 @@
-// Internal keys (must match horariosDB keys)
-const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+/* ===== Constants ===== */
 
-// Display labels (English)
-const DAY_LABELS = {
-    Lunes: "Monday",
-    Martes: "Tuesday",
-    Miercoles: "Wednesday",
-    Jueves: "Thursday",
-    Viernes: "Friday"
-};
+const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+const DAY_LABELS = { Lunes:"Monday", Martes:"Tuesday", Miercoles:"Wednesday", Jueves:"Thursday", Viernes:"Friday" };
 
 const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1.5-1.5Z"/>
@@ -43,23 +36,23 @@ function buildPhotoSlot(url, altText) {
         img.alt = altText;
         img.onerror = () => {
             wrap.innerHTML = "";
-            const fallback = document.createElement("div");
-            fallback.classList.add("no-photo");
-            fallback.textContent = "No Photo";
-            wrap.appendChild(fallback);
+            const fb = document.createElement("div");
+            fb.classList.add("no-photo");
+            fb.textContent = "No Photo";
+            wrap.appendChild(fb);
         };
         img.src = url;
         wrap.appendChild(img);
     } else {
-        const fallback = document.createElement("div");
-        fallback.classList.add("no-photo");
-        fallback.textContent = "No Photo";
-        wrap.appendChild(fallback);
+        const fb = document.createElement("div");
+        fb.classList.add("no-photo");
+        fb.textContent = "No Photo";
+        wrap.appendChild(fb);
     }
     return wrap;
 }
 
-/* ===== Elements ===== */
+/* ===== DOM refs ===== */
 
 const courseFullscreen = document.getElementById("courseFullscreen");
 const fsTopbarTitle = document.getElementById("fsTopbarTitle");
@@ -68,17 +61,17 @@ const dayTabs = document.getElementById("dayTabs");
 const dayTrack = document.getElementById("dayTrack");
 const galeriaTrack = document.getElementById("galeriaTrack");
 
+const drawer = document.getElementById("drawer");
+const drawerOverlay = document.getElementById("drawerOverlay");
+const drawerClose = document.getElementById("drawerClose");
+const drawerCourses = document.getElementById("drawerCourses");
+const drawerSignInBtn = document.getElementById("drawerSignInBtn");
 const drawerUser = document.getElementById("drawerUser");
 const drawerUserBtn = document.getElementById("drawerUserBtn");
 const drawerUserAvatar = document.getElementById("drawerUserAvatar");
 const drawerUserName = document.getElementById("drawerUserName");
 const drawerSignOutBtn = document.getElementById("drawerSignOutBtn");
 const drawerFooter = document.getElementById("drawerFooter");
-const drawer = document.getElementById("drawer");
-const drawerOverlay = document.getElementById("drawerOverlay");
-const drawerClose = document.getElementById("drawerClose");
-const drawerCourses = document.getElementById("drawerCourses");
-const drawerSignInBtn = document.getElementById("drawerSignInBtn");
 const fsMenuBtn = document.getElementById("fsMenuBtn");
 
 const studentsTrack = document.getElementById("studentsTrack");
@@ -95,6 +88,8 @@ const studentModalIngles = document.getElementById("studentModalIngles");
 const studentModalContrib = document.getElementById("studentModalContrib");
 const studentModalRole = document.getElementById("studentModalRole");
 const studentModalRoleText = document.getElementById("studentModalRoleText");
+const studentModalBest = document.getElementById("studentModalBest");
+const studentModalWorst = document.getElementById("studentModalWorst");
 
 const materiaModalOverlay = document.getElementById("materiaModalOverlay");
 const materiaModalClose = document.getElementById("materiaModalClose");
@@ -106,15 +101,6 @@ const materiaArchivosList = document.getElementById("materiaArchivosList");
 const dropzone = document.getElementById("dropzone");
 const materiaFileInput = document.getElementById("materiaFileInput");
 const uploadLoginHint = document.getElementById("uploadLoginHint");
-
-const loginBtn = document.getElementById("loginBtn");
-const userChip = document.getElementById("userChip");
-const userChipBtn = document.getElementById("userChipBtn");
-const userChipAvatar = document.getElementById("userChipAvatar");
-const userChipName = document.getElementById("userChipName");
-const userMenuPerfil = document.getElementById("userMenuPerfil");
-const userMenuConectar = document.getElementById("userMenuConectar");
-const userMenuLogout = document.getElementById("userMenuLogout");
 
 const loginModalOverlay = document.getElementById("loginModalOverlay");
 const loginModalClose = document.getElementById("loginModalClose");
@@ -143,9 +129,7 @@ function shortName(full) {
     const parts = full.trim().split(/\s+/);
     if (parts.length === 0) return "";
     const lastCount = parts.length >= 3 ? 2 : 1;
-    const first = parts[0];
-    const last = parts[parts.length - lastCount] || parts[parts.length - 1] || "";
-    return first + " " + last;
+    return parts[0] + " " + (parts[parts.length - lastCount] || parts[parts.length - 1] || "");
 }
 function normalize(str) {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -156,10 +140,7 @@ function loginCredentials(student) {
     const first = parts[0] || "";
     const last = parts[parts.length - lastCount] || parts[parts.length - 1] || "";
     const day = student.fechaNacimiento ? student.fechaNacimiento.slice(8, 10) : "";
-    return {
-        username: normalize(first + last),
-        password: normalize(last + first + day)
-    };
+    return { username: normalize(first + last), password: normalize(last + first + day) };
 }
 function firstLastName(full) {
     const parts = full.trim().split(/\s+/);
@@ -183,11 +164,8 @@ function formatDateTime(iso) {
 }
 function escapeHtml(str) {
     return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /* ===== Supabase ===== */
@@ -205,11 +183,8 @@ async function loadMateriaArchivos(materiaId) {
         return;
     }
     try {
-        const { data, error } = await supabaseClient
-            .from("archivos")
-            .select("*")
-            .eq("materia", materiaId)
-            .order("fecha", { ascending: false });
+        const { data, error } = await supabaseClient.from("archivos").select("*")
+            .eq("materia", materiaId).order("fecha", { ascending: false });
         if (error) throw error;
         renderMateriaArchivos(data || []);
     } catch (err) {
@@ -231,7 +206,6 @@ function renderMateriaArchivos(files) {
         row.classList.add("archivo-row");
         const uploadedBy = file.subido_por_nombre ? `Uploaded by ${file.subido_por_nombre}` : "";
         const canDelete = isAdmin || (currentUser && currentUser.id === file.subido_por_id);
-
         row.innerHTML = `
             <span class="archivo-icon">${FILE_ICON_SVG}</span>
             <div class="archivo-info">
@@ -242,9 +216,7 @@ function renderMateriaArchivos(files) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
             </button>` : ""}
         `;
-        if (canDelete) {
-            row.querySelector(".archivo-delete").addEventListener("click", () => deleteFile(file));
-        }
+        if (canDelete) row.querySelector(".archivo-delete").addEventListener("click", () => deleteFile(file));
         materiaArchivosList.appendChild(row);
     });
 }
@@ -263,9 +235,7 @@ async function deleteFile(file) {
 }
 
 function safePath(name) {
-    return name
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9._-]/g, "_");
+    return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function studentLevelId(student) {
@@ -278,19 +248,14 @@ function canUploadHere() {
     const me = getStudentById(currentUser.id);
     if (!me) return { ok: false, reason: "session" };
     if (me.curso !== currentCourse) return { ok: false, reason: "course" };
-    if (currentNivelId && studentLevelId(me) !== currentNivelId) {
-        return { ok: false, reason: "level" };
-    }
+    if (currentNivelId && studentLevelId(me) !== currentNivelId) return { ok: false, reason: "level" };
     return { ok: true };
 }
 
 async function uploadFiles(files) {
     if (!canUploadHere().ok || !currentMateriaId) return;
     const tooBig = Array.from(files).filter(f => f.size > MAX_FILE_SIZE);
-    if (tooBig.length > 0) {
-        alert(`"${tooBig[0].name}" is too large (max 50 MB).`);
-        return;
-    }
+    if (tooBig.length > 0) { alert(`"${tooBig[0].name}" is too large (max 50 MB).`); return; }
     dropzone.classList.add("dragging");
     dropzone.querySelector("p").textContent = "Uploading…";
     try {
@@ -299,13 +264,9 @@ async function uploadFiles(files) {
             const { error: uploadError } = await supabaseClient.storage.from("archivos").upload(path, file);
             if (uploadError) throw uploadError;
             const { error: insertError } = await supabaseClient.from("archivos").insert({
-                materia: currentMateriaId,
-                curso: currentCourse,
-                nombre: file.name,
-                storage_path: path,
-                subido_por_id: currentUser.id,
-                subido_por_nombre: currentUser.nombre,
-                fecha: new Date().toISOString()
+                materia: currentMateriaId, curso: currentCourse, nombre: file.name,
+                storage_path: path, subido_por_id: currentUser.id,
+                subido_por_nombre: currentUser.nombre, fecha: new Date().toISOString()
             });
             if (insertError) throw insertError;
         }
@@ -328,16 +289,206 @@ function updateUploadUI() {
     } else {
         dropzone.style.display = "none";
         uploadLoginHint.style.display = "block";
-        if (!supabaseListo()) {
-            uploadLoginHint.textContent = "Supabase isn't configured yet.";
-        } else if (state.reason === "course") {
-            uploadLoginHint.textContent = "Only students in this course can upload files here.";
-        } else if (state.reason === "level") {
-            uploadLoginHint.textContent = "This English level isn't yours — you can't upload files here.";
+        if (!supabaseListo()) uploadLoginHint.textContent = "Supabase isn't configured yet.";
+        else if (state.reason === "course") uploadLoginHint.textContent = "Only students in this course can upload files here.";
+        else if (state.reason === "level") uploadLoginHint.textContent = "This English level isn't yours — you can't upload files here.";
+        else uploadLoginHint.textContent = "Sign in to upload files.";
+    }
+}
+
+/* ===== Google Sheets data ===== */
+
+const SHEET_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQwtv1pKkVC9H4oYBWueNmh_69NrqJxsea1g_szh0gh_gyDrNA1Y5p1yxUB-h28QmyTm8nmTWqA2QC/pub";
+
+const SHEET_GIDS = {
+    cursos:      "1898434317",
+    estudiantes: "1865962054",
+    profesores:  "546336295",
+    materias:    "1091567357",
+    niveles:     "2018604320",
+    horarios:    "1332361361",
+    "2ITA":      "1075604004",
+    "2ITB":      "2045168297",
+    "2CNB":      "923150775"
+};
+
+function sheetUrl(gid) {
+    return `${SHEET_BASE}?gid=${gid}&single=true&output=csv`;
+}
+
+function parseCSVRows(text) {
+    const rows = [];
+    let row = [], cur = "", inQ = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQ) {
+            if (c === '"') {
+                if (text[i+1] === '"') { cur += '"'; i++; }
+                else inQ = false;
+            } else cur += c;
         } else {
-            uploadLoginHint.textContent = "Sign in to upload files.";
+            if (c === '"') inQ = true;
+            else if (c === ",") { row.push(cur); cur = ""; }
+            else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+            else if (c === "\r") {}
+            else cur += c;
         }
     }
+    if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+}
+
+function csvToObjects(text) {
+    const rows = parseCSVRows(text.trim());
+    if (rows.length === 0) return [];
+    const header = rows[0].map(h => h.trim());
+    return rows.slice(1)
+        .filter(r => r.some(c => c !== ""))
+        .map(r => {
+            const obj = {};
+            header.forEach((h, i) => { obj[h] = (r[i] || "").trim(); });
+            return obj;
+        });
+}
+
+async function loadSheet(name) {
+    const gid = SHEET_GIDS[name];
+    if (!gid || gid.startsWith("REEMPLAZAR")) return [];
+    const res = await fetch(sheetUrl(gid));
+    if (!res.ok) throw new Error("HTTP " + res.status + " en " + name);
+    return csvToObjects(await res.text());
+}
+
+async function loadAllData() {
+    try {
+        const [cursos, estudiantes, profesores, materias, niveles, horarios] = await Promise.all([
+            loadSheet("cursos"),
+            loadSheet("estudiantes"),
+            loadSheet("profesores"),
+            loadSheet("materias"),
+            loadSheet("niveles"),
+            loadSheet("horarios")
+        ]);
+
+        window.cursosDB = cursos.map(c => ({
+            id: c.id,
+            nombre: c.nombre,
+            disabled: (c.disabled || "").toLowerCase() === "true"
+        }));
+
+        window.estudiantesDB = estudiantes.map(e => ({
+            id: parseInt(e.id, 10),
+            nombre: e.nombre,
+            foto: e.foto,
+            curso: e.curso,
+            fechaNacimiento: e.fechaNacimiento,
+            nivelIngles: e.nivelIngles,
+            cargo: e.cargo
+        }));
+
+        window.profesoresDB = profesores.map(p => ({
+            id: p.id,
+            nombre: p.nombre,
+            foto: p.foto,
+            tutor: p.tutor || ""
+        }));
+
+        const nivelesPorMateria = {};
+        niveles.forEach(n => {
+            if (!n.materia_id) return;
+            if (!nivelesPorMateria[n.materia_id]) nivelesPorMateria[n.materia_id] = [];
+            nivelesPorMateria[n.materia_id].push({
+                id: n.nivel_id,
+                nombre: n.nombre,
+                profesor: n.profesor || ""
+            });
+        });
+        window.materiasDB = materias.map(m => {
+            const obj = { id: m.id, nombre: m.nombre };
+            if (nivelesPorMateria[m.id]) obj.niveles = nivelesPorMateria[m.id];
+            return obj;
+        });
+
+        const horariosMap = {};
+        horarios.forEach(h => {
+            if (!horariosMap[h.curso]) horariosMap[h.curso] = [];
+            let row = horariosMap[h.curso].find(r => r.hora === h.hora);
+            if (!row) {
+                row = { tipo: h.tipo, hora: h.hora };
+                if (h.tipo === "recreo") row.label = h.label || "Recreo";
+                horariosMap[h.curso].push(row);
+            }
+            if (h.tipo === "clase" && h.dia && h.materia) {
+                row[h.dia] = { materia: h.materia, profesor: h.profesor || "" };
+            }
+        });
+        window.horariosDB = horariosMap;
+
+        console.log(`[Oasis] Cargado: ${cursos.length} cursos, ${estudiantes.length} estudiantes, ${profesores.length} profesores, ${materias.length} materias, ${horarios.length} franjas`);
+    } catch (err) {
+        console.error("[Oasis] Error cargando datos desde Sheets:", err);
+    }
+}
+
+/* Notas: una hoja por curso */
+const NOTAS_CSV_URLS = {
+    "2ITA": sheetUrl(SHEET_GIDS["2ITA"]),
+    "2CNB": sheetUrl(SHEET_GIDS["2CNB"]),
+    "2ITB": sheetUrl(SHEET_GIDS["2ITB"])
+};
+
+async function loadNotasFromCSV() {
+    const combined = {};
+    for (const [courseId, url] of Object.entries(NOTAS_CSV_URLS)) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const text = await res.text();
+            const lines = text.trim().split(/\r?\n/);
+            if (lines.length < 3) continue;
+
+            const sep = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+            const header = lines[0].split(sep).map(s => s.trim());
+
+            const colToSubject = [];
+            let currentSubject = null;
+            for (let i = 0; i < header.length; i++) {
+                const val = header[i];
+                if (i >= 2 && val) currentSubject = val;
+                colToSubject.push(currentSubject);
+            }
+
+            const subjectCols = {};
+            for (let i = 2; i < colToSubject.length; i++) {
+                const subj = colToSubject[i];
+                if (!subj) continue;
+                if (!subjectCols[subj]) subjectCols[subj] = [];
+                subjectCols[subj].push(i);
+            }
+
+            let count = 0;
+            for (let r = 2; r < lines.length; r++) {
+                const raw = lines[r];
+                if (!raw.trim()) continue;
+                const cols = raw.split(sep).map(s => s.trim());
+                const id = cols[0];
+                if (!id) continue;
+
+                combined[id] = {};
+                for (const [subj, indices] of Object.entries(subjectCols)) {
+                    combined[id][subj] = indices.map(i => {
+                        const v = parseFloat(cols[i]);
+                        return isNaN(v) ? null : v;
+                    });
+                }
+                count++;
+            }
+            console.log(`[Oasis] Notas ${courseId}: ${count} estudiantes`);
+        } catch (err) {
+            console.warn(`[Oasis] Error cargando notas de ${courseId}:`, err);
+        }
+    }
+    if (Object.keys(combined).length > 0) window.notasDB = combined;
 }
 
 /* ===== Courses ===== */
@@ -372,7 +523,7 @@ function setCourse(courseId, { push = true } = {}) {
         try { history.replaceState(null, "", "#" + courseId); } catch {}
         sessionStorage.setItem("oasis_last_course", courseId);
     }
-    courseFullscreen.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 /* ===== Drawer ===== */
@@ -392,10 +543,7 @@ fsMenuBtn.addEventListener("click", openDrawer);
 drawerClose.addEventListener("click", closeDrawer);
 drawerOverlay.addEventListener("click", closeDrawer);
 
-drawerSignInBtn.addEventListener("click", () => {
-    closeDrawer();
-    openLoginModal();
-});
+drawerSignInBtn.addEventListener("click", () => { closeDrawer(); openLoginModal(); });
 
 drawerUserBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -417,34 +565,22 @@ drawerSignOutBtn.addEventListener("click", () => {
 function renderDrawerCourses() {
     const courses = typeof cursosDB !== "undefined" ? cursosDB : [];
     drawerCourses.innerHTML = "";
+    courses
+        .filter(course => !course.disabled)          // ← NUEVO: oculta los "Soon"
+        .forEach(course => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "drawer-course-item";
+            item.dataset.courseId = course.id;
 
-    courses.forEach(course => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "drawer-course-item";
-        item.dataset.courseId = course.id;
+            const name = document.createElement("span");
+            name.className = "drawer-course-name";
+            name.textContent = course.nombre;
+            item.appendChild(name);
 
-        const name = document.createElement("span");
-        name.className = "drawer-course-name";
-        name.textContent = course.nombre;
-        item.appendChild(name);
-
-        if (course.disabled) {
-            item.classList.add("disabled");
-            const badge = document.createElement("span");
-            badge.className = "drawer-course-badge";
-            badge.textContent = "Soon";
-            item.appendChild(badge);
-            item.disabled = true;
-        } else {
-            item.addEventListener("click", () => {
-                setCourse(course.id);
-                closeDrawer();
-            });
-        }
-
-        drawerCourses.appendChild(item);
-    });
+            item.addEventListener("click", () => { setCourse(course.id); closeDrawer(); });
+            drawerCourses.appendChild(item);
+        });
 }
 
 /* ===== ESC key ===== */
@@ -476,7 +612,6 @@ function renderTutor(courseId) {
     photoWrap.classList.add("tutor-photo-wrap");
     const photoSlot = buildPhotoSlot(tutor.foto, tutor.nombre);
     photoWrap.appendChild(photoSlot);
-
     const tutorImg = photoSlot.querySelector("img");
     if (tutorImg) {
         tutorImg.addEventListener("click", () => openImageViewer(tutor.foto));
@@ -496,7 +631,6 @@ function materiaNombre(id) {
     const m = findMateria(id);
     return m ? m.nombre : id;
 }
-
 function cellKey(cell) {
     if (!cell) return null;
     return cell.materia + "|" + (cell.profesor || "");
@@ -519,12 +653,8 @@ function renderScheduleTable(rows) {
         while (i < rows.length) {
             if (rows[i].tipo !== "clase") { i++; continue; }
             let j = i + 1;
-            while (
-                j < rows.length &&
-                rows[j].tipo === "clase" &&
-                cellKey(rows[i][day]) &&
-                cellKey(rows[j][day]) === cellKey(rows[i][day])
-            ) {
+            while (j < rows.length && rows[j].tipo === "clase" &&
+                cellKey(rows[i][day]) && cellKey(rows[j][day]) === cellKey(rows[i][day])) {
                 skip.add(j + "|" + day);
                 j++;
             }
@@ -615,16 +745,9 @@ function renderScheduleMobile(rows) {
             }
 
             let cardEl, hourLabel;
-            if (entry.type === "recreo") {
-                cardEl = buildBreakCard(entry.row);
-                hourLabel = entry.row.hora;
-            } else if (entry.type === "free") {
-                cardEl = buildFreeCard();
-                hourLabel = entry.row.hora.split(" - ")[0];
-            } else {
-                cardEl = buildSubjectCard(entry.cell);
-                hourLabel = entry.row.hora.split(" - ")[0];
-            }
+            if (entry.type === "recreo") { cardEl = buildBreakCard(entry.row); hourLabel = entry.row.hora; }
+            else if (entry.type === "free") { cardEl = buildFreeCard(); hourLabel = entry.row.hora.split(" - ")[0]; }
+            else { cardEl = buildSubjectCard(entry.cell); hourLabel = entry.row.hora.split(" - ")[0]; }
 
             panel.appendChild(buildTimelineItem(hourLabel, cardEl, position));
         });
@@ -686,7 +809,7 @@ function showDay(idx) {
     document.querySelectorAll(".day-panel").forEach((p, i) => p.classList.toggle("active", i === idx));
 }
 
-/* ===== Announcements (chat) ===== */
+/* ===== Announcements ===== */
 
 const announcementsModalOverlay = document.getElementById("announcementsModalOverlay");
 const announcementsModalClose = document.getElementById("announcementsModalClose");
@@ -710,7 +833,6 @@ function canPostAnnouncement() {
 }
 
 function renderAnnouncementMessage(text) {
-    // Replace {materiaId} with clickable chips
     let safe = escapeHtml(text);
     safe = safe.replace(/\{([a-zA-Z0-9_\-]+)\}/g, (match, id) => {
         const m = findMateria(id);
@@ -725,7 +847,6 @@ async function openAnnouncementsModal() {
     lockScroll();
     await loadAnnouncements();
 }
-
 function closeAnnouncementsModal() {
     announcementsModalOverlay.classList.remove("active");
     unlockScroll();
@@ -736,9 +857,7 @@ function closeAnnouncementsModal() {
 
 openAnnouncementsBtn.addEventListener("click", openAnnouncementsModal);
 const openAnnouncementsMobileBtn = document.getElementById("openAnnouncementsMobileBtn");
-if (openAnnouncementsMobileBtn) {
-    openAnnouncementsMobileBtn.addEventListener("click", openAnnouncementsModal);
-}
+if (openAnnouncementsMobileBtn) openAnnouncementsMobileBtn.addEventListener("click", openAnnouncementsModal);
 announcementsModalClose.addEventListener("click", closeAnnouncementsModal);
 announcementsModalOverlay.addEventListener("click", e => {
     if (e.target === announcementsModalOverlay) closeAnnouncementsModal();
@@ -748,16 +867,13 @@ announcementsMentionBtn.addEventListener("click", () => {
     const ta = announcementsInput;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
-    const before = ta.value.slice(0, start);
-    const after = ta.value.slice(end);
-    ta.value = before + "{}" + after;
+    ta.value = ta.value.slice(0, start) + "{}" + ta.value.slice(end);
     ta.selectionStart = ta.selectionEnd = start + 1;
     ta.focus();
 });
 
 async function loadAnnouncements() {
     announcementsChat.innerHTML = `<p class="announcements-empty">Loading…</p>`;
-
     if (!supabaseListo()) {
         announcementsChat.innerHTML = `<p class="announcements-empty">Supabase isn't configured.</p>`;
         updateAnnouncementsInputUI();
@@ -767,13 +883,9 @@ async function loadAnnouncements() {
         announcementsChat.innerHTML = `<p class="announcements-empty">No course selected.</p>`;
         return;
     }
-
     try {
-        const { data, error } = await supabaseClient
-            .from("anuncios")
-            .select("*")
-            .eq("curso", currentCourse)
-            .order("fecha", { ascending: true });
+        const { data, error } = await supabaseClient.from("anuncios").select("*")
+            .eq("curso", currentCourse).order("fecha", { ascending: true });
         if (error) throw error;
         renderAnnouncements(data || []);
         updateAnnouncementsInputUI();
@@ -786,25 +898,16 @@ async function loadAnnouncements() {
 
 function updateAnnouncementsCount(messages) {
     if (!announcementsCount) return;
-    const n = messages.length;
-    announcementsCount.textContent = n > 0 ? String(n) : "";
+    announcementsCount.textContent = messages.length > 0 ? String(messages.length) : "";
 }
-
 async function refreshAnnouncementsCount() {
     if (!announcementsCount) return;
-    if (!supabaseListo() || !currentCourse) {
-        announcementsCount.textContent = "";
-        return;
-    }
+    if (!supabaseListo() || !currentCourse) { announcementsCount.textContent = ""; return; }
     try {
-        const { count } = await supabaseClient
-            .from("anuncios")
-            .select("*", { count: "exact", head: true })
+        const { count } = await supabaseClient.from("anuncios").select("*", { count: "exact", head: true })
             .eq("curso", currentCourse);
         announcementsCount.textContent = count ? String(count) : "";
-    } catch {
-        announcementsCount.textContent = "";
-    }
+    } catch { announcementsCount.textContent = ""; }
 }
 
 function updateAnnouncementsInputUI() {
@@ -830,10 +933,7 @@ function renderAnnouncements(messages) {
         announcementsChat.innerHTML = `<p class="announcements-empty">No announcements yet.</p>`;
         return;
     }
-
-    messages.forEach(msg => {
-        announcementsChat.appendChild(buildAnnouncementEl(msg));
-    });
+    messages.forEach(msg => announcementsChat.appendChild(buildAnnouncementEl(msg)));
     announcementsChat.scrollTop = announcementsChat.scrollHeight;
 }
 
@@ -841,6 +941,9 @@ function buildAnnouncementEl(msg) {
     const wrap = document.createElement("div");
     wrap.classList.add("msg");
     wrap.dataset.id = msg.id;
+
+    const main = document.createElement("div");
+    main.classList.add("msg-main");
 
     const head = document.createElement("div");
     head.classList.add("msg-head");
@@ -856,43 +959,45 @@ function buildAnnouncementEl(msg) {
         role.textContent = msg.autor_cargo;
         head.appendChild(role);
     }
-
     const dateEl = document.createElement("span");
     dateEl.classList.add("msg-date");
     dateEl.textContent = formatDateTime(msg.fecha);
     head.appendChild(dateEl);
-
-    wrap.appendChild(head);
+    main.appendChild(head);
 
     const body = document.createElement("div");
     body.classList.add("msg-body");
     body.innerHTML = renderAnnouncementMessage(msg.mensaje || "");
-    wrap.appendChild(body);
+    main.appendChild(body);
 
     if (msg.edited_at) {
         const edited = document.createElement("div");
         edited.classList.add("msg-edited");
         edited.textContent = "(edited)";
-        wrap.appendChild(edited);
+        main.appendChild(edited);
     }
 
-    // Mentions click -> open subject
+    wrap.appendChild(main);
+
+    // Avatar a la derecha
+    const student = getStudentById(msg.autor_id);
+    const photoUrl = (student && student.foto) || "";
+    const avatar = document.createElement("div");
+    avatar.classList.add("msg-avatar");
+    avatar.appendChild(buildPhotoSlot(photoUrl, msg.autor_nombre || ""));
+    wrap.appendChild(avatar);
+
     body.querySelectorAll(".msg-mention").forEach(chip => {
         chip.addEventListener("click", () => {
             const matId = chip.dataset.materia;
-            if (matId && findMateria(matId)) {
-                closeAnnouncementsModal();
-                openMateriaModal(matId, null);
-            }
+            if (matId && findMateria(matId)) { closeAnnouncementsModal(); openMateriaModal(matId, null); }
         });
     });
 
-    // Actions if author
     const canEdit = currentUser && currentUser.id === msg.autor_id;
     if (canEdit) {
         const actions = document.createElement("div");
         actions.classList.add("msg-actions");
-
         const editBtn = document.createElement("button");
         editBtn.classList.add("msg-action-btn");
         editBtn.textContent = "Edit";
@@ -909,10 +1014,8 @@ function buildAnnouncementEl(msg) {
         delBtn.textContent = "Delete";
         delBtn.addEventListener("click", () => deleteAnnouncement(msg));
         actions.appendChild(delBtn);
-
-        wrap.appendChild(actions);
+        main.appendChild(actions);
     }
-
     return wrap;
 }
 
@@ -924,10 +1027,7 @@ async function deleteAnnouncement(msg) {
         if (error) throw error;
         await loadAnnouncements();
         refreshAnnouncementsCount();
-    } catch (err) {
-        console.error(err);
-        alert("Couldn't delete announcement.");
-    }
+    } catch (err) { console.error(err); alert("Couldn't delete announcement."); }
 }
 
 announcementsSendBtn.addEventListener("click", async () => {
@@ -938,13 +1038,11 @@ announcementsSendBtn.addEventListener("click", async () => {
     announcementsSendBtn.disabled = true;
     const originalLabel = announcementsSendBtn.textContent;
     announcementsSendBtn.textContent = "…";
-
     const me = getStudentById(currentUser.id);
 
     try {
         if (editingAnnouncementId) {
-            const { error } = await supabaseClient
-                .from("anuncios")
+            const { error } = await supabaseClient.from("anuncios")
                 .update({ mensaje: text, edited_at: new Date().toISOString() })
                 .eq("id", editingAnnouncementId);
             if (error) throw error;
@@ -952,12 +1050,10 @@ announcementsSendBtn.addEventListener("click", async () => {
             announcementsSendBtn.textContent = "Send";
         } else {
             const { error } = await supabaseClient.from("anuncios").insert({
-                curso: currentCourse,
-                autor_id: currentUser.id,
+                curso: currentCourse, autor_id: currentUser.id,
                 autor_nombre: currentUser.nombre,
                 autor_cargo: me && me.cargo ? me.cargo : "",
-                mensaje: text,
-                fecha: new Date().toISOString()
+                mensaje: text, fecha: new Date().toISOString()
             });
             if (error) throw error;
         }
@@ -969,9 +1065,7 @@ announcementsSendBtn.addEventListener("click", async () => {
         alert("Couldn't save the announcement. Check the console (F12).");
     } finally {
         announcementsSendBtn.disabled = false;
-        if (announcementsSendBtn.textContent === "…") {
-            announcementsSendBtn.textContent = originalLabel;
-        }
+        if (announcementsSendBtn.textContent === "…") announcementsSendBtn.textContent = originalLabel;
     }
 });
 
@@ -1014,16 +1108,9 @@ function renderNivelTabs(niveles) {
 function showNivel(nivel) {
     currentNivelId = nivel.id;
     currentMateriaId = currentMateriaBaseId + "::" + nivel.id;
-
     const profesor = findProfesor(nivel.profesor);
-    if (profesor) {
-        setProfPhoto(profesor.foto || "");
-        materiaModalProfNombre.textContent = profesor.nombre;
-    } else {
-        setProfPhoto("");
-        materiaModalProfNombre.textContent = "No teacher assigned";
-    }
-
+    if (profesor) { setProfPhoto(profesor.foto || ""); materiaModalProfNombre.textContent = profesor.nombre; }
+    else { setProfPhoto(""); materiaModalProfNombre.textContent = "No teacher assigned"; }
     loadMateriaArchivos(currentMateriaId);
     updateUploadUI();
 }
@@ -1040,20 +1127,12 @@ function openMateriaModal(materiaId, profesorId) {
         materiaNiveles.style.display = "none";
         currentNivelId = null;
         currentMateriaId = materiaId;
-
         const profesor = findProfesor(profesorId);
-        if (profesor) {
-            setProfPhoto(profesor.foto || "");
-            materiaModalProfNombre.textContent = profesor.nombre;
-        } else {
-            setProfPhoto("");
-            materiaModalProfNombre.textContent = "No teacher assigned";
-        }
-
+        if (profesor) { setProfPhoto(profesor.foto || ""); materiaModalProfNombre.textContent = profesor.nombre; }
+        else { setProfPhoto(""); materiaModalProfNombre.textContent = "No teacher assigned"; }
         loadMateriaArchivos(currentMateriaId);
         updateUploadUI();
     }
-
     materiaModalOverlay.classList.add("active");
     lockScroll();
 }
@@ -1071,18 +1150,12 @@ materiaModalOverlay.addEventListener("click", e => { if (e.target === materiaMod
 
 dropzone.addEventListener("click", () => materiaFileInput.click());
 materiaFileInput.addEventListener("change", e => uploadFiles(e.target.files));
-["dragenter", "dragover"].forEach(evt =>
-    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add("dragging"); })
-);
-["dragleave", "drop"].forEach(evt =>
-    dropzone.addEventListener(evt, e => {
-        e.preventDefault();
-        if (evt === "dragleave") dropzone.classList.remove("dragging");
-    })
-);
-dropzone.addEventListener("drop", e => {
-    if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
-});
+["dragenter", "dragover"].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add("dragging"); }));
+["dragleave", "drop"].forEach(evt => dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    if (evt === "dragleave") dropzone.classList.remove("dragging");
+}));
+dropzone.addEventListener("drop", e => { if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); });
 
 /* ===== Gallery ===== */
 
@@ -1092,18 +1165,13 @@ async function renderGallery(courseId) {
 
     if (supabaseListo()) {
         try {
-            const { data, error } = await supabaseClient
-                .from("galeria_fotos")
-                .select("*")
-                .eq("curso", courseId);
+            const { data, error } = await supabaseClient.from("galeria_fotos").select("*").eq("curso", courseId);
             if (error) throw error;
             (data || []).forEach(row => {
                 const { data: urlData } = supabaseClient.storage.from("galeria").getPublicUrl(row.storage_path);
                 list.push({ ruta: urlData.publicUrl });
             });
-        } catch (err) {
-            console.warn("Couldn't load uploaded gallery photos:", err);
-        }
+        } catch (err) { console.warn("Couldn't load gallery photos:", err); }
     }
 
     galeriaTrack.innerHTML = "";
@@ -1114,7 +1182,6 @@ async function renderGallery(courseId) {
     } else {
         const sizeClasses = ["size-a", "size-b", "size-c"];
         const doubled = list.concat(list);
-
         doubled.forEach((item, i) => {
             const div = document.createElement("div");
             div.classList.add("galeria-item", sizeClasses[i % sizeClasses.length]);
@@ -1127,11 +1194,9 @@ async function renderGallery(courseId) {
             div.appendChild(img);
             galeriaTrack.appendChild(div);
         });
-
         const duration = Math.max(list.length * 5, 20);
         galeriaTrack.style.animation = `galeriaScroll ${duration}s linear infinite`;
     }
-
     updateGaleriaUploadUI();
     setupGalleryAutoScroll();
 }
@@ -1157,10 +1222,7 @@ function updateGaleriaUploadUI() {
 async function uploadGalleryPhotos(files) {
     if (!currentUser || currentUser.isAdmin || !supabaseListo() || !currentCourse) return;
     const tooBig = Array.from(files).filter(f => f.size > MAX_GALERIA_SIZE);
-    if (tooBig.length > 0) {
-        alert(`"${tooBig[0].name}" is too large (max 10 MB).`);
-        return;
-    }
+    if (tooBig.length > 0) { alert(`"${tooBig[0].name}" is too large (max 10 MB).`); return; }
     galeriaDropzone.classList.add("dragging");
     galeriaDropzone.querySelector("p").textContent = "Uploading…";
     try {
@@ -1169,10 +1231,8 @@ async function uploadGalleryPhotos(files) {
             const { error: upErr } = await supabaseClient.storage.from("galeria").upload(path, file);
             if (upErr) throw upErr;
             const { error: insErr } = await supabaseClient.from("galeria_fotos").insert({
-                curso: currentCourse,
-                storage_path: path,
-                subido_por_id: currentUser.id,
-                subido_por_nombre: currentUser.nombre,
+                curso: currentCourse, storage_path: path,
+                subido_por_id: currentUser.id, subido_por_nombre: currentUser.nombre,
                 fecha: new Date().toISOString()
             });
             if (insErr) throw insErr;
@@ -1190,18 +1250,12 @@ async function uploadGalleryPhotos(files) {
 
 galeriaDropzone.addEventListener("click", () => galeriaFileInput.click());
 galeriaFileInput.addEventListener("change", e => uploadGalleryPhotos(e.target.files));
-["dragenter", "dragover"].forEach(evt =>
-    galeriaDropzone.addEventListener(evt, e => { e.preventDefault(); galeriaDropzone.classList.add("dragging"); })
-);
-["dragleave", "drop"].forEach(evt =>
-    galeriaDropzone.addEventListener(evt, e => {
-        e.preventDefault();
-        if (evt === "dragleave") galeriaDropzone.classList.remove("dragging");
-    })
-);
-galeriaDropzone.addEventListener("drop", e => {
-    if (e.dataTransfer.files.length) uploadGalleryPhotos(e.dataTransfer.files);
-});
+["dragenter", "dragover"].forEach(evt => galeriaDropzone.addEventListener(evt, e => { e.preventDefault(); galeriaDropzone.classList.add("dragging"); }));
+["dragleave", "drop"].forEach(evt => galeriaDropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    if (evt === "dragleave") galeriaDropzone.classList.remove("dragging");
+}));
+galeriaDropzone.addEventListener("drop", e => { if (e.dataTransfer.files.length) uploadGalleryPhotos(e.dataTransfer.files); });
 
 /* ===== Gallery auto-scroll (mobile) ===== */
 
@@ -1218,7 +1272,6 @@ function startGalleryAuto() {
     if (!isMobileGallery()) return;
     const viewport = galeriaTrack.parentElement;
     if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
-
     galeriaAutoTimer = setInterval(() => {
         const half = viewport.scrollWidth / 2;
         viewport.scrollLeft += 1;
@@ -1229,17 +1282,14 @@ function startGalleryAuto() {
 function stopGalleryAuto() {
     if (galeriaAutoTimer) { clearInterval(galeriaAutoTimer); galeriaAutoTimer = null; }
 }
-
 function pauseGalleryTemporarily() {
     stopGalleryAuto();
     if (galeriaResumeTimer) clearTimeout(galeriaResumeTimer);
     galeriaResumeTimer = setTimeout(startGalleryAuto, 2200);
 }
-
 function setupGalleryAutoScroll() {
     const viewport = galeriaTrack.parentElement;
     if (!viewport) return;
-
     if (!galeriaListenersListos) {
         viewport.addEventListener("touchstart", pauseGalleryTemporarily, { passive: true });
         viewport.addEventListener("touchend", pauseGalleryTemporarily, { passive: true });
@@ -1259,37 +1309,24 @@ let isAdmin = false;
 
 function updateAuthUI() {
     if (currentUser) {
-        loginBtn.style.display = "none";
         drawerFooter.style.display = "none";
         drawerUser.style.display = "block";
-
-        userChip.style.display = "flex";
-        userChipName.textContent = currentUser.nombre;
+        drawer.classList.add("logged-in");
 
         const me = getStudentById(currentUser.id);
         const photoUrl = currentUser.foto || (me ? me.foto : "");
 
-        userChipAvatar.innerHTML = "";
-        userChipAvatar.appendChild(buildPhotoSlot(photoUrl, currentUser.nombre));
-
         drawerUserAvatar.innerHTML = "";
         drawerUserAvatar.appendChild(buildPhotoSlot(photoUrl, currentUser.nombre));
         drawerUserName.textContent = currentUser.nombre;
-
-        userMenuAdmin.style.display = isAdmin ? "flex" : "none";
-        userMenuPerfil.style.display = currentUser.isAdmin ? "none" : "flex";
-        userMenuConectar.style.display = currentUser.isAdmin ? "none" : "flex";
     } else {
-        loginBtn.style.display = "inline-flex";
         drawerFooter.style.display = "block";
         drawerUser.style.display = "none";
         drawerUser.classList.remove("open");
-
-        userChip.style.display = "none";
-        userChip.classList.remove("open");
+        drawer.classList.remove("logged-in");
     }
     if (materiaModalOverlay.classList.contains("active")) updateUploadUI();
-    if (courseFullscreen.classList.contains("active")) updateGaleriaUploadUI();
+    if (courseFullscreen) updateGaleriaUploadUI();
     updateAnnouncementsInputUI();
 }
 
@@ -1300,8 +1337,6 @@ function openLoginModal() {
     loginModalOverlay.classList.add("active");
     lockScroll();
 }
-
-loginBtn.addEventListener("click", openLoginModal);
 
 function closeLoginModal() {
     loginModalOverlay.classList.remove("active");
@@ -1322,10 +1357,7 @@ function tryLogin() {
         const creds = loginCredentials(e);
         return creds.username === u && creds.password === p;
     });
-    if (!match) {
-        loginError.style.display = "block";
-        return;
-    }
+    if (!match) { loginError.style.display = "block"; return; }
     isAdmin = false;
     currentUser = { id: match.id, nombre: shortName(match.nombre) };
     sessionStorage.setItem("oasis_session", JSON.stringify(currentUser));
@@ -1333,120 +1365,12 @@ function tryLogin() {
     closeLoginModal();
 }
 
-userChipBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    userChip.classList.toggle("open");
-});
-
-document.addEventListener("click", (e) => {
-    if (!userChip.contains(e.target)) userChip.classList.remove("open");
-});
-
-userMenuPerfil.addEventListener("click", () => {
-    userChip.classList.remove("open");
-    if (!currentUser) return;
-    const me = getStudentById(currentUser.id);
-    if (me) openStudentModal(me);
-});
-
-userMenuLogout.addEventListener("click", () => {
-    currentUser = null;
-    isAdmin = false;
-    sessionStorage.removeItem("oasis_session");
-    updateAuthUI();
-});
-
 const savedSession = sessionStorage.getItem("oasis_session");
 if (savedSession) {
     currentUser = JSON.parse(savedSession);
     isAdmin = !!currentUser.isAdmin;
 }
 updateAuthUI();
-
-/* ===== Google Sign-In ===== */
-
-let conectandoGoogle = false;
-
-function parseJwt(token) {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-        atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
-    );
-    return JSON.parse(jsonPayload);
-}
-
-function handleGoogleCredential(response) {
-    const payload = parseJwt(response.credential);
-    const email = payload.email;
-
-    if (email === ADMIN_EMAIL) {
-        isAdmin = true;
-        currentUser = { id: "admin", nombre: payload.name, isAdmin: true, foto: payload.picture };
-        sessionStorage.setItem("oasis_session", JSON.stringify(currentUser));
-        updateAuthUI();
-        closeLoginModal();
-        return;
-    }
-
-    if (conectandoGoogle && currentUser && !currentUser.isAdmin) {
-        const links = JSON.parse(localStorage.getItem("oasis_google_links") || "{}");
-        links[email] = currentUser.id;
-        localStorage.setItem("oasis_google_links", JSON.stringify(links));
-        conectandoGoogle = false;
-        alert("Your Google account is now linked. Next time use \"Continue with Google\".");
-        return;
-    }
-
-    const links = JSON.parse(localStorage.getItem("oasis_google_links") || "{}");
-    const studentId = links[email];
-    const est = studentId ? getStudentById(studentId) : null;
-
-    if (est) {
-        isAdmin = false;
-        currentUser = { id: est.id, nombre: shortName(est.nombre) };
-        sessionStorage.setItem("oasis_session", JSON.stringify(currentUser));
-        updateAuthUI();
-        closeLoginModal();
-    } else {
-        alert("This Google account isn't linked to any student yet. Sign in with username/password, then link it from your profile menu.");
-    }
-}
-
-function initGoogleAuth() {
-    if (!window.google || !google.accounts || !google.accounts.id) return;
-    if (GOOGLE_CLIENT_ID.includes("TU_CLIENT_ID")) {
-        console.warn("GOOGLE_CLIENT_ID missing in data/supabase-config.js");
-        return;
-    }
-    try {
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-        const div = document.getElementById("googleSignInDiv");
-        if (div) google.accounts.id.renderButton(div, { theme: "filled_black", shape: "pill", size: "large", width: 260 });
-    } catch (err) {
-        console.error("Error initializing Google Sign-In:", err);
-    }
-}
-window.addEventListener("load", initGoogleAuth);
-
-userMenuConectar.addEventListener("click", () => {
-    userChip.classList.remove("open");
-    if (GOOGLE_CLIENT_ID.includes("TU_CLIENT_ID")) {
-        alert("Google Sign-In isn't configured yet.");
-        return;
-    }
-    if (!window.google || !google.accounts || !google.accounts.id) {
-        alert("Google Sign-In isn't available yet. Try reloading.");
-        return;
-    }
-    conectandoGoogle = true;
-    google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            conectandoGoogle = false;
-            alert("Google didn't show the popup. Try signing out and using \"Continue with Google\" from the login modal.");
-        }
-    });
-});
 
 /* ===== Admin panel ===== */
 
@@ -1456,7 +1380,6 @@ const adminDataType = document.getElementById("adminDataType");
 const adminDataTextarea = document.getElementById("adminDataTextarea");
 const adminSaveBtn = document.getElementById("adminSaveBtn");
 const adminSaveStatus = document.getElementById("adminSaveStatus");
-const userMenuAdmin = document.getElementById("userMenuAdmin");
 
 function getGlobalFor(kind) {
     if (kind === "cursos") return cursosDB;
@@ -1480,30 +1403,19 @@ function loadAdminTextarea() {
 
 adminDataType.addEventListener("change", loadAdminTextarea);
 
-userMenuAdmin.addEventListener("click", () => {
-    userChip.classList.remove("open");
-    loadAdminTextarea();
-    adminModalOverlay.classList.add("active");
-    lockScroll();
-});
-
 adminModalClose.addEventListener("click", () => {
     adminModalOverlay.classList.remove("active");
     unlockScroll();
 });
 adminModalOverlay.addEventListener("click", e => {
-    if (e.target === adminModalOverlay) {
-        adminModalOverlay.classList.remove("active");
-        unlockScroll();
-    }
+    if (e.target === adminModalOverlay) { adminModalOverlay.classList.remove("active"); unlockScroll(); }
 });
 
 adminSaveBtn.addEventListener("click", async () => {
     const kind = adminDataType.value;
     let parsed;
-    try {
-        parsed = JSON.parse(adminDataTextarea.value);
-    } catch (err) {
+    try { parsed = JSON.parse(adminDataTextarea.value); }
+    catch (err) {
         adminSaveStatus.style.color = "#ff8a8a";
         adminSaveStatus.textContent = "Text isn't valid JSON: " + err.message;
         return;
@@ -1516,8 +1428,7 @@ adminSaveBtn.addEventListener("click", async () => {
     adminSaveBtn.disabled = true;
     adminSaveBtn.textContent = "Saving…";
     try {
-        const { error } = await supabaseClient
-            .from("config")
+        const { error } = await supabaseClient.from("config")
             .upsert({ id: kind, data: parsed, updated_at: new Date().toISOString() });
         if (error) throw error;
         setGlobalFor(kind, parsed);
@@ -1534,21 +1445,6 @@ adminSaveBtn.addEventListener("click", async () => {
         adminSaveBtn.textContent = "Save changes";
     }
 });
-
-async function loadConfigsFromSupabase() {
-    if (!supabaseListo()) return;
-    try {
-        const { data, error } = await supabaseClient.from("config").select("*");
-        if (error) throw error;
-        (data || []).forEach(row => {
-            if (["cursos", "estudiantes", "profesores", "materias", "horarios"].includes(row.id) && row.data) {
-                setGlobalFor(row.id, row.data);
-            }
-        });
-    } catch (err) {
-        console.warn("Couldn't load from Supabase, using local files:", err);
-    }
-}
 
 /* ===== Students ===== */
 
@@ -1605,8 +1501,25 @@ function openStudentModal(s) {
 
     studentModalName.textContent = s.nombre;
     if (s.cargo) {
-        studentModalRole.style.display = "inline-flex";
+        studentModalRole.style.display = "flex";
         studentModalRoleText.textContent = s.cargo;
+
+        // Marquee on mobile for long cargo names
+        const marquee = document.getElementById("studentModalRoleMarquee");
+        if (marquee) {
+            const oldClone = marquee.querySelector(".role-marquee-clone");
+            if (oldClone) oldClone.remove();
+            marquee.classList.remove("marquee");
+
+            if (window.matchMedia("(max-width:800px)").matches && s.cargo.length > 18) {
+                const clone = document.createElement("span");
+                clone.className = "role-marquee-clone";
+                clone.textContent = s.cargo;
+                marquee.appendChild(clone);
+                void marquee.offsetWidth;   // fuerza reflow para reiniciar la animación
+                marquee.classList.add("marquee");
+            }
+        }
     } else {
         studentModalRole.style.display = "none";
     }
@@ -1614,7 +1527,12 @@ function openStudentModal(s) {
     studentModalIngles.textContent = s.nivelIngles || "-";
     studentModalContrib.textContent = "...";
 
-    // Reset radar open state
+    // Best / worst subjects
+    const bw = getBestWorst(s.id);
+    studentModalBest.textContent = bw.best ? `${bw.best.name} (${bw.best.value.toFixed(1)})` : "-";
+    studentModalWorst.textContent = bw.worst ? `${bw.worst.name} (${bw.worst.value.toFixed(1)})` : "-";
+
+    // Reset radar expanded state
     const fsRoot = studentModalOverlay.querySelector(".student-fs");
     if (fsRoot) fsRoot.classList.remove("radar-open");
 
@@ -1622,8 +1540,7 @@ function openStudentModal(s) {
     lockScroll();
 
     if (supabaseListo()) {
-        supabaseClient
-            .from("archivos")
+        supabaseClient.from("archivos")
             .select("*", { count: "exact", head: true })
             .eq("subido_por_id", s.id)
             .then(({ count }) => {
@@ -1647,7 +1564,26 @@ function closeStudentModal() {
 studentModalClose.addEventListener("click", closeStudentModal);
 studentModalOverlay.addEventListener("click", e => { if (e.target === studentModalOverlay) closeStudentModal(); });
 
-/* ===== Radar ===== */
+
+function getStudentSubjects(studentId) {
+    const student = getStudentById(studentId);
+    if (!student) return [];
+    const rows = (typeof horariosDB !== "undefined" ? horariosDB[student.curso] : null) || [];
+    const ids = [];
+    rows.forEach(row => {
+        if (row.tipo !== "clase") return;
+        days.forEach(day => {
+            const cell = row[day];
+            if (cell && cell.materia && !ids.includes(cell.materia)) {
+                ids.push(cell.materia);
+            }
+        });
+    });
+    return ids;
+}
+
+
+/* ===== Grades & Radar ===== */
 
 function getStudentAverages(studentId) {
     const raw = (typeof notasDB !== "undefined" ? notasDB[studentId] : null);
@@ -1662,18 +1598,32 @@ function getStudentAverages(studentId) {
     return Object.keys(out).length ? out : null;
 }
 
+function getBestWorst(studentId) {
+    const avgs = getStudentAverages(studentId);
+    if (!avgs) return { best: null, worst: null };
+    const entries = Object.entries(avgs).filter(([id]) => !!findMateria(id));
+    if (entries.length === 0) return { best: null, worst: null };
+    entries.sort((a, b) => b[1] - a[1]);
+    const best = entries[0];
+    const worst = entries[entries.length - 1];
+    return {
+        best: { name: materiaNombre(best[0]), value: best[1] },
+        worst: { name: materiaNombre(worst[0]), value: worst[1] }
+    };
+}
+
 function shortLabel(name, max = 9) {
     if (name.length <= max) return name;
     return name.slice(0, max - 1).trimEnd() + "…";
 }
 
-function buildRadarChart(subjects, values, { size = 280, max = 10 } = {}) {
+function buildRadarChart(subjects, values, { size = 280, max = 10, danger = 7, showData = true } = {}) {
     const n = subjects.length;
     if (n < 3) return null;
 
-    const cx = size / 2;
-    const cy = size / 2;
+    const cx = size / 2, cy = size / 2;
     const r = size / 2 - 46;
+    const dangerRatio = danger / max;
 
     const angle = i => (Math.PI * 2 * i) / n - Math.PI / 2;
     const point = (i, ratio) => {
@@ -1686,6 +1636,7 @@ function buildRadarChart(subjects, values, { size = 280, max = 10 } = {}) {
     svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
     svg.setAttribute("role", "img");
 
+    // Anillos de referencia
     [0.25, 0.5, 0.75, 1].forEach(ratio => {
         const pts = subjects.map((_, i) => point(i, ratio).join(",")).join(" ");
         const poly = document.createElementNS(NS, "polygon");
@@ -1694,6 +1645,14 @@ function buildRadarChart(subjects, values, { size = 280, max = 10 } = {}) {
         svg.appendChild(poly);
     });
 
+    // Anillo rojo de peligro (7/10)
+    const dangerPts = subjects.map((_, i) => point(i, dangerRatio).join(",")).join(" ");
+    const dangerPoly = document.createElementNS(NS, "polygon");
+    dangerPoly.setAttribute("points", dangerPts);
+    dangerPoly.setAttribute("class", "radar-danger");
+    svg.appendChild(dangerPoly);
+
+    // Ejes
     subjects.forEach((_, i) => {
         const [x, y] = point(i, 1);
         const line = document.createElementNS(NS, "line");
@@ -1705,22 +1664,26 @@ function buildRadarChart(subjects, values, { size = 280, max = 10 } = {}) {
         svg.appendChild(line);
     });
 
-    const dataPts = values.map((v, i) => point(i, Math.max(0, Math.min(v / max, 1))).join(",")).join(" ");
-    const dataPoly = document.createElementNS(NS, "polygon");
-    dataPoly.setAttribute("points", dataPts);
-    dataPoly.setAttribute("class", "radar-data");
-    svg.appendChild(dataPoly);
+    // Polígono de datos + puntos (solo si hay notas)
+    if (showData) {
+        const dataPts = values.map((v, i) => point(i, Math.max(0, Math.min(v / max, 1))).join(",")).join(" ");
+        const dataPoly = document.createElementNS(NS, "polygon");
+        dataPoly.setAttribute("points", dataPts);
+        dataPoly.setAttribute("class", "radar-data");
+        svg.appendChild(dataPoly);
 
-    values.forEach((v, i) => {
-        const [x, y] = point(i, Math.max(0, Math.min(v / max, 1)));
-        const dot = document.createElementNS(NS, "circle");
-        dot.setAttribute("cx", x);
-        dot.setAttribute("cy", y);
-        dot.setAttribute("r", 3.5);
-        dot.setAttribute("class", "radar-dot");
-        svg.appendChild(dot);
-    });
+        values.forEach((v, i) => {
+            const [x, y] = point(i, Math.max(0, Math.min(v / max, 1)));
+            const dot = document.createElementNS(NS, "circle");
+            dot.setAttribute("cx", x);
+            dot.setAttribute("cy", y);
+            dot.setAttribute("r", 3.5);
+            dot.setAttribute("class", "radar-dot");
+            svg.appendChild(dot);
+        });
+    }
 
+    // Etiquetas de materias
     subjects.forEach((s, i) => {
         const [x, y] = point(i, 1.20);
         const a = angle(i);
@@ -1747,38 +1710,49 @@ function renderStudentRadar(studentId) {
     cont.innerHTML = "";
 
     const averages = getStudentAverages(studentId);
-    if (!averages) {
+
+    // Caso 1: hay notas suficientes → radar con polígono
+    if (averages) {
+        const entries = Object.entries(averages)
+            .filter(([id]) => !!findMateria(id))
+            .sort((a, b) => materiaNombre(a[0]).localeCompare(materiaNombre(b[0]), "en"));
+
+        if (entries.length >= 3) {
+            const subjects = entries.map(([id]) => shortLabel(materiaNombre(id)));
+            const values = entries.map(([, v]) => v);
+            const chart = buildRadarChart(subjects, values, { size: 280, max: 10, danger: 7, showData: true });
+            if (chart) cont.appendChild(chart);
+            return;
+        }
+    }
+
+    // Caso 2: no hay notas → radar vacío con las materias del horario
+    const subjectIds = getStudentSubjects(studentId).filter(id => !!findMateria(id));
+
+    if (subjectIds.length < 3) {
         cont.innerHTML = `<p class="student-radar-empty">No grades recorded</p>`;
         return;
     }
 
-    const entries = Object.entries(averages)
-        .filter(([id]) => !!findMateria(id))
-        .sort((a, b) => materiaNombre(a[0]).localeCompare(materiaNombre(b[0]), "en"));
+    const subjects = subjectIds
+        .sort((a, b) => materiaNombre(a).localeCompare(materiaNombre(b), "en"))
+        .map(id => shortLabel(materiaNombre(id)));
 
-    if (entries.length < 3) {
-        cont.innerHTML = `<p class="student-radar-empty">At least 3 subjects with grades are needed</p>`;
-        return;
-    }
-
-    const subjects = entries.map(([id]) => shortLabel(materiaNombre(id)));
-    const values = entries.map(([, v]) => v);
-
-    const chart = buildRadarChart(subjects, values, { size: 280, max: 10 });
+    // Pasamos valores en cero pero con showData:false, así no se dibuja nada
+    const chart = buildRadarChart(subjects, subjects.map(() => 0), {
+        size: 280, max: 10, danger: 7, showData: false
+    });
     if (chart) cont.appendChild(chart);
 }
 
-/* Radar expand on mobile — click inside the radar area only */
+/* Radar expand on mobile */
 document.addEventListener("click", (e) => {
     if (!window.matchMedia("(max-width:800px)").matches) return;
-
     const radar = e.target.closest(".student-fs-radar");
     if (!radar) return;
     if (!radar.querySelector("svg")) return;
-
     const fsRoot = radar.closest(".student-fs");
     if (!fsRoot) return;
-
     fsRoot.classList.toggle("radar-open");
 });
 
@@ -1804,7 +1778,10 @@ imageViewer.addEventListener("click", e => { if (e.target === imageViewer) close
 /* ===== Boot ===== */
 
 async function initApp() {
-    await loadConfigsFromSupabase();
+    await Promise.all([
+        loadAllData(),
+        loadNotasFromCSV()
+    ]);
     renderDrawerCourses();
 
     const courses = typeof cursosDB !== "undefined" ? cursosDB : [];

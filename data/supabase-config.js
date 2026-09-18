@@ -149,9 +149,6 @@
 //    on storage.objects for insert
 //    with check ( bucket_id = 'galeria' );
 
-const GOOGLE_CLIENT_ID = "46519698675-n171ahdrf9iqtpj6bldlbrd90rmdul9i.apps.googleusercontent.com";
-const ADMIN_EMAIL = "june74576@gmail.com";
-
 const SUPABASE_URL = "https://mupdiqlibvhvckcoqprp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cGRpcWxpYnZodmNrY29xcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDQ4NDksImV4cCI6MjEwMDMyMDg0OX0.KI1OdPh9dXKk2DGyNwb8Cfmu1usClbzbx8Zoy1X4V8A";
 

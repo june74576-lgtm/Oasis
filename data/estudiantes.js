@@ -1,4 +1,4 @@
-const estudiantesDB = [
+let estudiantesDB = [
 // 2 Informática A
     {
         id: 1,
@@ -194,8 +194,8 @@ const estudiantesDB = [
     },
     {
         id: 22,
-        nombre: "Damián Andrés Guedez Castillo",
-        foto: "fotos_estudiantes/guedezdamian.jpg",
+        nombre: "Damián Andrés Guedes Castillo",
+        foto: "fotos_estudiantes/guedesdamian.jpg",
         curso: "2CNB",
         fechaNacimiento: "",
         nivelIngles: "Basic (B1+)",

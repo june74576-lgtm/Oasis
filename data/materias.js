@@ -1,4 +1,4 @@
-const materiasDB = [
+let materiasDB = [
     {
         id: "ingles2CNB",
         nombre: "Inglés",

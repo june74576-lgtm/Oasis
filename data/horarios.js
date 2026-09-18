@@ -1,4 +1,4 @@
-const horariosDB = {
+let horariosDB = {
     "2ITA": [
         {
             tipo: "clase",

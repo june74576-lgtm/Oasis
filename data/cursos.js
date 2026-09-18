@@ -1,4 +1,4 @@
-const cursosDB = [
+let cursosDB = [
     {
         id: "2ITA",
         nombre: "2do Informática A",

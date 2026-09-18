@@ -1,4 +1,4 @@
-const profesoresDB = [
+let profesoresDB = [
     {
         id: "moyano",
         nombre: "Giovanny Ivan Moyano Llorenty",
