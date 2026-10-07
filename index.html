@@ -9,239 +9,423 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Pacifico&family=Roboto+Flex:opsz,wght@8..144,300..800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Pequeño extra para Vue: cursor zoom en PhotoSlot marcado */
+        .photo-slot.zoomable img { cursor: zoom-in; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script src="data/supabase-config.js?v=4"></script>
-<base target="_blank">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
 
-<div class="drawer-overlay" id="drawerOverlay"></div>
-<aside class="drawer" id="drawer">
-    <div class="drawer-header">
-        <span class="drawer-title" id="drawerTitle">Courses</span>
-        <div class="drawer-user" id="drawerUser" style="display:none;">
-            <button class="drawer-user-btn" id="drawerUserBtn">
-                <span class="drawer-user-avatar" id="drawerUserAvatar"></span>
-                <span class="drawer-user-name" id="drawerUserName"></span>
+<div id="app">
+
+    <!-- ===== Drawer ===== -->
+    <div class="drawer-overlay" :class="{ active: drawerOpen }" @click="closeDrawer"></div>
+    <aside class="drawer" :class="{ active: drawerOpen, 'logged-in': currentUser }">
+        <div class="drawer-header">
+            <span class="drawer-title" v-if="!currentUser">Courses</span>
+
+            <div class="drawer-user" v-if="currentUser" :class="{ open: drawerUserMenuOpen }">
+                <button class="drawer-user-btn" @click.stop="drawerUserMenuOpen = !drawerUserMenuOpen">
+                    <span class="drawer-user-avatar">
+                        <photo-slot :src="currentUserPhoto" :alt="currentUser.nombre"></photo-slot>
+                    </span>
+                    <span class="drawer-user-name">{{ currentUser.nombre }}</span>
+                </button>
+                <div class="drawer-user-menu">
+                    <button class="drawer-user-menu-item danger" @click="signOut">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
+                        Sign out
+                    </button>
+                </div>
+            </div>
+
+            <button class="drawer-close" @click="closeDrawer" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M6 6l12 12M18 6 6 18"/>
+                </svg>
             </button>
-            <div class="drawer-user-menu" id="drawerUserMenu">
-                <button class="drawer-user-menu-item danger" id="drawerSignOutBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
-                    Sign out
-                </button>
+        </div>
+
+        <nav class="drawer-courses">
+            <button v-for="c in cursosDisponibles" :key="c.id"
+                    type="button"
+                    class="drawer-course-item"
+                    :class="{ active: c.id === currentCourse }"
+                    @click="selectCourse(c.id)">
+                <span class="drawer-course-name">{{ c.nombre }}</span>
+            </button>
+        </nav>
+
+        <div class="drawer-footer" v-if="!currentUser">
+            <button class="drawer-signin-btn" @click="openLogin">Sign in</button>
+        </div>
+    </aside>
+
+    <!-- ===== Página principal ===== -->
+    <main class="course-page">
+        <div class="fs-topbar">
+            <button class="fs-menu" @click="drawerOpen = true" aria-label="Course menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="fs-topbar-title">{{ currentCourseObj ? currentCourseObj.nombre : 'Loading…' }}</span>
+            <a class="fs-sheets" href="https://docs.google.com/spreadsheets/d/1te_Rc4KcW8N6ZPTHov89KMTBipByCGOfXjntUscVVOw/edit?usp=sharing" target="_blank" rel="noopener" aria-label="Open spreadsheet" title="Open spreadsheet">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z" fill="#0F9D58"/>
+                    <path d="M14.5 2v5.5H20z" fill="#0B8043"/>
+                    <rect x="7" y="11" width="10" height="8" fill="#fff"/>
+                    <line x1="7" y1="14.5" x2="17" y2="14.5" stroke="#0F9D58" stroke-width="0.9"/>
+                    <line x1="7" y1="16.5" x2="17" y2="16.5" stroke="#0F9D58" stroke-width="0.9"/>
+                    <line x1="10.3" y1="11" x2="10.3" y2="19" stroke="#0F9D58" stroke-width="0.9"/>
+                    <line x1="13.7" y1="11" x2="13.7" y2="19" stroke="#0F9D58" stroke-width="0.9"/>
+                </svg>
+            </a>
+        </div>
+
+        <div class="fs-body">
+
+            <!-- Tutor -->
+            <section class="fs-section">
+                <div class="fs-section-header"><h2>Tutor</h2><div class="divider-pill"></div></div>
+                <div class="tutor-row">
+                    <template v-if="tutor">
+                        <div class="tutor-photo-wrap">
+                            <photo-slot :src="tutor.foto" :alt="tutor.nombre" :zoomable="true" @zoom="openImageViewer(tutor.foto)"></photo-slot>
+                        </div>
+                        <span class="tutor-name">{{ tutor.nombre }}</span>
+                    </template>
+                    <p v-else class="materia-archivos-empty">No tutor assigned</p>
+                </div>
+            </section>
+
+            <!-- Schedule -->
+            <section class="fs-section">
+                <div class="fs-section-header"><h2>Schedule</h2><div class="divider-pill"></div></div>
+                <div class="horario-wrapper">
+                    <button class="announcements-open-btn" @click="openAnnouncementsModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/><path d="M8 21v-6h8v6"/></svg>
+                        <span>Open announcements</span>
+                        <span class="announcements-count">{{ announcementsCount || '' }}</span>
+                    </button>
+
+                    <table class="horario">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in horarioTableRows" :key="r.index">
+                                <td class="hora-cell">{{ r.row.hora }}</td>
+                                <template v-if="r.row.tipo === 'recreo'">
+                                    <td class="recreo-cell" colspan="5">{{ r.row.label || 'Break' }}</td>
+                                </template>
+                                <template v-else>
+                                    <template v-for="(c, i) in r.cells" :key="i">
+                                        <td v-if="!c.skip"
+                                            :rowspan="c.span"
+                                            :class="c.cell ? 'materia-cell' : 'libre-cell'"
+                                            @click="c.cell && openMateriaModal(c.cell.materia, c.cell.profesor)">
+                                            {{ c.cell ? materiaNombre(c.cell.materia) : 'Free' }}
+                                        </td>
+                                    </template>
+                                </template>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="horario-mobile">
+                        <div class="day-tabs">
+                            <button v-for="(p, i) in horarioMobilePanels" :key="p.day"
+                                    class="day-tab" :class="{ active: i === dayTab }"
+                                    @click="dayTab = i">{{ p.label }}</button>
+                        </div>
+                        <button class="announcements-mobile-btn" type="button" @click="openAnnouncementsModal">Announcements</button>
+                        <div class="day-track">
+                            <div v-for="(p, i) in horarioMobilePanels" :key="p.day"
+                                 class="day-panel" :class="{ active: i === dayTab }">
+                                <div v-for="(e, j) in p.entries" :key="j"
+                                     class="timeline-item"
+                                     :class="e.position !== 'solo' ? ('chain-' + e.position) : ''">
+                                    <div class="timeline-time-col">{{ e.hour }}</div>
+                                    <div class="timeline-connector">
+                                        <span class="timeline-dot" :class="{ hollow: e.position === 'middle' || e.position === 'end' }"></span>
+                                        <span class="timeline-line" :class="{ connected: e.position === 'start' || e.position === 'middle' }"></span>
+                                    </div>
+                                    <div v-if="e.type === 'recreo'" class="timeline-card recreo-card">{{ e.row.label || 'Break' }}</div>
+                                    <div v-else-if="e.type === 'free'" class="timeline-card libre-card">Free</div>
+                                    <div v-else class="timeline-card clickable" @click="openMateriaModal(e.cell.materia, e.cell.profesor)">
+                                        <div class="materia-name">{{ materiaNombre(e.cell.materia) }}</div>
+                                        <div v-if="profesorDe(e.cell.profesor)" class="prof-name">{{ profesorDe(e.cell.profesor).nombre }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Students -->
+            <section class="fs-section">
+                <div class="fs-section-header"><h2>Students</h2><div class="divider-pill"></div></div>
+                <div class="carousel-container">
+                    <button class="nav-btn prev-btn" @click="scrollStudents(-320)" aria-label="Previous">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <div class="cards-estudiantes" ref="studentsTrack">
+                        <p v-if="studentsList.length === 0" class="students-empty">No students yet</p>
+                        <div v-for="s in studentsList" :key="s.id" class="card-estudiante" @click="openStudentModal(s)">
+                            <div class="thumb">
+                                <photo-slot :src="s.foto" :alt="s.nombre"></photo-slot>
+                            </div>
+                            <span v-if="s.cargo" class="badge-cargo">{{ s.cargo }}</span>
+                            <div class="apellido">{{ firstLastName(s.nombre) }}</div>
+                        </div>
+                    </div>
+                    <button class="nav-btn next-btn" @click="scrollStudents(320)" aria-label="Next">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Gallery -->
+            <section class="fs-section">
+                <div class="fs-section-header"><h2>Gallery</h2><div class="divider-pill"></div></div>
+                <div class="galeria-viewport" ref="galeriaViewport"
+                     @touchstart.passive="pauseGalleryTemporarily"
+                     @touchend.passive="pauseGalleryTemporarily">
+                    <div class="galeria-track" ref="galeriaTrack" :style="galeriaTrackStyle">
+                        <p v-if="galeriaAll.length === 0" class="galeria-empty">No photos in the gallery yet</p>
+                        <div v-for="(item, i) in galeriaDoubled" :key="i"
+                             class="galeria-item"
+                             :class="'size-' + ['a','b','c'][i % 3]">
+                             <img :src="item.ruta" alt=""
+                             style="cursor: zoom-in"
+                             @error="onGalleryImgError"
+                             @click="openImageViewer(item.ruta)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dropzone" v-if="canUploadGaleria"
+                     :class="{ dragging: dropGaleriaDragging }"
+                     @click="$refs.galeriaFileInput.click()"
+                     @dragenter.prevent="dropGaleriaDragging = true"
+                     @dragover.prevent="dropGaleriaDragging = true"
+                     @dragleave.prevent="dropGaleriaDragging = false"
+                     @drop.prevent="onGaleriaDrop">
+                    <input type="file" ref="galeriaFileInput" accept="image/*" multiple hidden @change="onGaleriaFiles">
+                    <p v-if="galleryUploading">Uploading…</p>
+                    <p v-else>Drag a photo here, or <span class="dropzone-link">click</span> (max. 10 MB each)</p>
+                </div>
+                <p class="login-hint" v-else>{{ galeriaHint }}</p>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- ===== Modal Materia ===== -->
+    <div class="mini-overlay" :class="{ active: materiaOpen }" @click.self="closeMateriaModal">
+        <div class="mini-modal">
+            <button class="modal-close" @click="closeMateriaModal" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <h3>{{ materiaNombreActual }}</h3>
+
+            <div class="materia-niveles" v-if="materiaNiveles.length > 0">
+                <button v-for="n in materiaNiveles" :key="n.id"
+                        class="nivel-tab" :class="{ active: n.id === materiaNivelId }"
+                        @click="showNivel(n)">{{ n.nombre }}</button>
+            </div>
+
+            <div class="materia-profesor">
+                <div class="prof-photo-wrap">
+                    <img v-if="materiaProfFoto && !profPhotoFailed"
+                         :src="materiaProfFoto" class="prof-photo" alt=""
+                         @error="profPhotoFailed = true"
+                         @click="openImageViewer(materiaProfFoto)"
+                         style="cursor:zoom-in">
+                    <div v-else class="no-photo prof-photo"></div>
+                </div>
+                <span>{{ materiaProfNombre }}</span>
+            </div>
+
+            <p class="mini-subhead">Files</p>
+            <div class="materia-archivos-list">
+                <p v-if="materiaArchivosLoading" class="materia-archivos-empty">Loading…</p>
+                <p v-else-if="materiaArchivos.length === 0" class="materia-archivos-empty">No files yet</p>
+                <div v-for="f in materiaArchivos" :key="f.id" class="archivo-row">
+                    <span class="archivo-icon" v-html="FILE_ICON_SVG"></span>
+                    <div class="archivo-info">
+                        <a class="archivo-nombre" :href="fileUrl(f)" target="_blank" rel="noopener">{{ f.nombre }}</a>
+                        <div v-if="f.subido_por_nombre" class="archivo-meta">Uploaded by {{ f.subido_por_nombre }}</div>
+                    </div>
+                    <button v-if="canDeleteFile(f)" class="archivo-delete" @click="deleteFile(f)" aria-label="Delete file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dropzone" v-if="canUploadMateria"
+                 :class="{ dragging: dropMateriaDragging }"
+                 @click="$refs.materiaFileInput.click()"
+                 @dragenter.prevent="dropMateriaDragging = true"
+                 @dragover.prevent="dropMateriaDragging = true"
+                 @dragleave.prevent="dropMateriaDragging = false"
+                 @drop.prevent="onMateriaDrop">
+                <input type="file" ref="materiaFileInput" multiple hidden @change="onMateriaFiles">
+                <p v-if="materiaUploading">Uploading…</p>
+                <p v-else>Drag a file here, or <span class="dropzone-link">click</span> (max. 50 MB)</p>
+            </div>
+            <p class="login-hint" v-else>{{ uploadHint }}</p>
+        </div>
+    </div>
+
+    <!-- ===== Modal Estudiante ===== -->
+    <div class="mini-overlay student-overlay" :class="{ active: studentOpen }" @click.self="closeStudentModal">
+        <div class="student-fs" :class="{ 'radar-open': radarOpen }">
+            <button class="student-fs-close" @click="closeStudentModal" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+
+            <div class="student-fs-photo" v-if="studentSelected">
+                <img v-if="studentSelected.foto && !studentPhotoFailed"
+                     :src="studentSelected.foto" alt=""
+                     @error="studentPhotoFailed = true"
+                     @click="openImageViewer(studentSelected.foto)"
+                     style="cursor:zoom-in">
+                <div v-else class="no-photo">No Photo</div>
+
+                <div class="student-photo-role" v-if="studentSelected.cargo">
+                    <div class="role-marquee" :class="{ marquee: roleMarqueeActive }">
+                        <span>{{ studentSelected.cargo }}</span>
+                        <span v-if="roleMarqueeActive" class="role-marquee-clone">{{ studentSelected.cargo }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="student-fs-info" v-if="studentSelected">
+                <h2 class="student-fs-name">{{ studentSelected.nombre }}</h2>
+                <p class="student-fs-birth">{{ formatDate(studentSelected.fechaNacimiento) }}</p>
+
+                <div class="student-fs-extras">
+                    <div class="student-fs-item">
+                        <span class="student-fs-label">Best subject</span>
+                        <strong class="student-fs-value">{{ bestWorst.best ? bestWorst.best.name + ' (' + bestWorst.best.value.toFixed(1) + ')' : '-' }}</strong>
+                    </div>
+                    <div class="student-fs-item">
+                        <span class="student-fs-label">Worst subject</span>
+                        <strong class="student-fs-value">{{ bestWorst.worst ? bestWorst.worst.name + ' (' + bestWorst.worst.value.toFixed(1) + ')' : '-' }}</strong>
+                    </div>
+                </div>
+
+                <div class="student-fs-details">
+                    <div class="student-fs-item">
+                        <span class="student-fs-label">English level</span>
+                        <strong class="student-fs-value">{{ studentSelected.nivelIngles || '-' }}</strong>
+                    </div>
+                    <div class="student-fs-item">
+                        <span class="student-fs-label">Contributions</span>
+                        <strong class="student-fs-value">{{ studentContrib }}</strong>
+                    </div>
+                </div>
+
+                <div class="student-fs-radar" @click="toggleRadarIfMobile">
+                    <p v-if="!radarSvgHtml" class="student-radar-empty">No grades recorded</p>
+                    <span v-else style="display:contents" v-html="radarSvgHtml"></span>
+                </div>
             </div>
         </div>
-        <button class="drawer-close" id="drawerClose" aria-label="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M6 6l12 12M18 6 6 18"/>
-            </svg>
-        </button>
-    </div>
-    <nav class="drawer-courses" id="drawerCourses"></nav>
-    <div class="drawer-footer" id="drawerFooter">
-        <button class="drawer-signin-btn" id="drawerSignInBtn">Sign in</button>
-    </div>
-</aside>
-
-<main class="course-page" id="courseFullscreen">
-    <div class="fs-topbar" id="fsTopbar">
-        <button class="fs-menu" id="fsMenuBtn" aria-label="Course menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-        </button>
-        <span class="fs-topbar-title" id="fsTopbarTitle">Loading…</span>
-        <a class="fs-sheets" href="https://docs.google.com/spreadsheets/d/1te_Rc4KcW8N6ZPTHov89KMTBipByCGOfXjntUscVVOw/edit?usp=sharing" target="_blank" rel="noopener" aria-label="Open spreadsheet" title="Open spreadsheet">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z" fill="#0F9D58"/>
-                <path d="M14.5 2v5.5H20z" fill="#0B8043"/>
-                <rect x="7" y="11" width="10" height="8" fill="#fff"/>
-                <line x1="7" y1="14.5" x2="17" y2="14.5" stroke="#0F9D58" stroke-width="0.9"/>
-                <line x1="7" y1="16.5" x2="17" y2="16.5" stroke="#0F9D58" stroke-width="0.9"/>
-                <line x1="10.3" y1="11" x2="10.3" y2="19" stroke="#0F9D58" stroke-width="0.9"/>
-                <line x1="13.7" y1="11" x2="13.7" y2="19" stroke="#0F9D58" stroke-width="0.9"/>
-            </svg>
-        </a>
     </div>
 
-    <div class="fs-body">
-        <section class="fs-section">
-            <div class="fs-section-header"><h2>Tutor</h2><div class="divider-pill"></div></div>
-            <div class="tutor-row" id="tutorCard"></div>
-        </section>
+    <!-- ===== Modal Login ===== -->
+    <div class="mini-overlay" :class="{ active: loginOpen }" @click.self="closeLoginModal">
+        <div class="mini-modal">
+            <button class="modal-close" @click="closeLoginModal" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <h3>Sign in</h3>
+            <div class="login-form">
+                <input type="text" v-model="loginUser" placeholder="Username" autocomplete="username">
+                <input type="password" v-model="loginPass" placeholder="Password" autocomplete="current-password" @keydown.enter="tryLogin">
+                <p class="login-error" v-if="loginError">Wrong username or password</p>
+                <button class="btn-filled" @click="tryLogin">Sign in</button>
+            </div>
+        </div>
+    </div>
 
-        <section class="fs-section">
-            <div class="fs-section-header"><h2>Schedule</h2><div class="divider-pill"></div></div>
-            <div class="horario-wrapper">
-                <button class="announcements-open-btn" id="openAnnouncementsBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/><path d="M8 21v-6h8v6"/></svg>
-                    <span>Open announcements</span>
-                    <span class="announcements-count" id="announcementsCount"></span>
-                </button>
-                <table class="horario" id="horarioTable">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th>
-                        </tr>
-                    </thead>
-                    <tbody id="horarioBody"></tbody>
-                </table>
+    <!-- ===== Modal Anuncios ===== -->
+    <div class="mini-overlay" :class="{ active: announcementsOpen }" @click.self="closeAnnouncementsModal">
+        <div class="mini-modal announcements-modal">
+            <button class="modal-close" @click="closeAnnouncementsModal" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <h3>Announcements</h3>
+            <div class="divider-pill"></div>
+
+            <div class="announcements-chat" ref="announcementsChat">
+                <p v-if="announcementsLoading" class="announcements-empty">Loading…</p>
+                <p v-else-if="announcements.length === 0" class="announcements-empty">No announcements yet.</p>
+
+                <div v-for="msg in announcements" :key="msg.id" class="msg">
+                    <div class="msg-avatar"
+                         :class="{ 'has-photo': !!studentFoto(msg.autor_id) }"
+                         @click="studentFoto(msg.autor_id) && openImageViewer(studentFoto(msg.autor_id))">
+                        <photo-slot :src="studentFoto(msg.autor_id)" :alt="msg.autor_nombre || ''"></photo-slot>
+                    </div>
                 
-                <div class="horario-mobile" id="horarioMobile">
-                    <div class="day-tabs" id="dayTabs"></div>
-                    <button class="announcements-mobile-btn" id="openAnnouncementsMobileBtn" type="button">Announcements</button>
-                    <div class="day-track" id="dayTrack"></div>
+                    <div class="msg-main">
+                        <div class="msg-head">
+                            <span class="msg-author">{{ msg.autor_nombre || 'Someone' }}</span>
+                            <span v-if="msg.autor_cargo" class="msg-role">{{ msg.autor_cargo }}</span>
+                            <span class="msg-date">{{ formatDateTime(msg.fecha) }}</span>
+                        </div>
+                
+                        <div class="msg-body" v-html="renderAnnouncementMessage(msg.mensaje)" @click="onMsgBodyClick"></div>
+                
+                        <div class="msg-footer" v-if="msg.edited_at || (currentUser && currentUser.id === msg.autor_id)">
+                            <span v-if="msg.edited_at" class="msg-edited">(edited)</span>
+                            <div v-if="currentUser && currentUser.id === msg.autor_id" class="msg-actions">
+                                <button class="msg-action-btn" @click="editAnnouncement(msg)">Edit</button>
+                                <button class="msg-action-btn danger" @click="deleteAnnouncement(msg)">Delete</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <section class="fs-section">
-            <div class="fs-section-header"><h2>Students</h2><div class="divider-pill"></div></div>
-            <div class="carousel-container">
-                <button class="nav-btn prev-btn" id="studentsPrevBtn" aria-label="Previous">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-                <div class="cards-estudiantes" id="studentsTrack"></div>
-                <button class="nav-btn next-btn" id="studentsNextBtn" aria-label="Next">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            <div class="announcements-input-wrap" v-if="canPostAnnouncement">
+                <button class="announcements-mention-btn" type="button" title="Mention a subject" @click="insertMention">{ }</button>
+                <textarea ref="announcementsTextarea" v-model="announcementsInput"
+                          placeholder="Write an announcement… use {subjectId} to mention a subject" rows="2"></textarea>
+                <button class="btn-filled small" @click="sendAnnouncement" :disabled="announcementsSending">
+                    {{ announcementsSending ? '…' : (editingAnnouncementId ? 'Save' : 'Send') }}
                 </button>
             </div>
-        </section>
-
-        <section class="fs-section">
-            <div class="fs-section-header"><h2>Gallery</h2><div class="divider-pill"></div></div>
-            <div class="galeria-viewport"><div class="galeria-track" id="galeriaTrack"></div></div>
-            <div class="dropzone" id="galeriaDropzone" style="display:none;">
-                <input type="file" id="galeriaFileInput" accept="image/*" multiple hidden>
-                <p>Drag a photo here, or <span class="dropzone-link">click</span> (max. 10 MB each)</p>
-            </div>
-            <p class="login-hint" id="galeriaLoginHint">Sign in to add photos to the gallery.</p>
-        </section>
+            <p class="login-hint" v-else>{{ announcementsHint }}</p>
+        </div>
     </div>
-</main>
 
-<div class="mini-overlay student-overlay" id="studentModalOverlay">
-    <div class="student-fs">
-        <button class="student-fs-close" id="studentModalClose" aria-label="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    <!-- ===== Image viewer ===== -->
+    <div class="image-viewer" :class="{ active: imageViewerOpen }" @click.self="closeImageViewer">
+        <button class="image-viewer-close" @click="closeImageViewer" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
-        <div class="student-fs-photo">
-            <img id="studentModalPhoto" src="" alt="">
-            <div class="no-photo" id="studentPhotoFallback" style="display:none;">No Photo</div>
-            <div class="student-photo-role" id="studentModalRole" style="display:none;">
-                <div class="role-marquee" id="studentModalRoleMarquee">
-                    <span id="studentModalRoleText"></span>
-                </div>
-            </div>
-        </div>
-        <div class="student-fs-info">
-            <h2 class="student-fs-name" id="studentModalName"></h2>
-            <p class="student-fs-birth" id="studentModalBirth"></p>
-            <div class="student-fs-extras">
-                <div class="student-fs-item">
-                    <span class="student-fs-label">Best subject</span>
-                    <strong class="student-fs-value" id="studentModalBest">-</strong>
-                </div>
-                <div class="student-fs-item">
-                    <span class="student-fs-label">Worst subject</span>
-                    <strong class="student-fs-value" id="studentModalWorst">-</strong>
-                </div>
-            </div>
-            <div class="student-fs-details">
-                <div class="student-fs-item">
-                    <span class="student-fs-label">English level</span>
-                    <strong class="student-fs-value" id="studentModalIngles">-</strong>
-                </div>
-                <div class="student-fs-item">
-                    <span class="student-fs-label">Contributions</span>
-                    <strong class="student-fs-value" id="studentModalContrib">-</strong>
-                </div>
-            </div>
-            <div class="student-fs-radar" id="studentModalRadar"></div>
-        </div>
+        <img :src="imageViewerSrc" alt="">
     </div>
-</div>
 
-<div class="mini-overlay" id="materiaModalOverlay">
-    <div class="mini-modal">
-        <button class="modal-close" id="materiaModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-        <h3 id="materiaModalNombre"></h3>
-        <div class="materia-niveles" id="materiaNiveles" style="display:none;"></div>
-        <div class="materia-profesor">
-            <div class="prof-photo-wrap">
-                <img id="materiaModalProfFoto" class="prof-photo" src="" alt="">
-                <div class="no-photo prof-photo" id="profPhotoFallback" style="display:none;"></div>
-            </div>
-            <span id="materiaModalProfNombre"></span>
-        </div>
-        <p class="mini-subhead">Files</p>
-        <div class="materia-archivos-list" id="materiaArchivosList"></div>
-        <div class="dropzone" id="dropzone" style="display:none;">
-            <input type="file" id="materiaFileInput" multiple hidden>
-            <p>Drag a file here, or <span class="dropzone-link">click</span> (max. 50 MB)</p>
-        </div>
-        <p class="login-hint" id="uploadLoginHint">Sign in to upload files.</p>
-    </div>
-</div>
-
-<div class="mini-overlay" id="loginModalOverlay">
-    <div class="mini-modal">
-        <button class="modal-close" id="loginModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-        <h3>Sign in</h3>
-        <div class="login-form">
-            <input type="text" id="loginUsername" placeholder="Username" autocomplete="username">
-            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
-            <p class="login-error" id="loginError" style="display:none;">Wrong username or password</p>
-            <button id="loginSubmitBtn" class="btn-filled">Sign in</button>
-        </div>
-    </div>
-</div>
-
-<div class="mini-overlay" id="adminModalOverlay">
-    <div class="mini-modal admin-modal">
-        <button class="modal-close" id="adminModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-        <h3>Admin panel</h3>
-        <div class="divider-pill"></div>
-        <select id="adminDataType" class="admin-select">
-            <option value="cursos">Courses</option>
-            <option value="estudiantes">Students</option>
-            <option value="profesores">Teachers</option>
-            <option value="materias">Subjects</option>
-            <option value="horarios">Schedules</option>
-        </select>
-        <p class="login-hint">It's JSON: keys go in quotes.</p>
-        <textarea id="adminDataTextarea" class="admin-textarea" rows="16" spellcheck="false"></textarea>
-        <p class="login-hint" id="adminSaveStatus"></p>
-        <button id="adminSaveBtn" class="btn-filled">Save changes</button>
-    </div>
-</div>
-
-<div class="mini-overlay" id="announcementsModalOverlay">
-    <div class="mini-modal announcements-modal">
-        <button class="modal-close" id="announcementsModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-        <h3>Announcements</h3>
-        <div class="divider-pill"></div>
-        <div class="announcements-chat" id="announcementsChat"></div>
-        <div class="announcements-input-wrap" id="announcementsInputWrap" style="display:none;">
-            <button class="announcements-mention-btn" id="announcementsMentionBtn" type="button" title="Mention a subject">{ }</button>
-            <textarea id="announcementsInput" placeholder="Write an announcement… use {subjectId} to mention a subject" rows="2"></textarea>
-            <button class="btn-filled small" id="announcementsSendBtn">Send</button>
-        </div>
-        <p class="login-hint" id="announcementsHint">Sign in to see announcements.</p>
-    </div>
-</div>
-
-<div class="image-viewer" id="imageViewer">
-    <button class="image-viewer-close" id="imageViewerClose" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
-    </button>
-    <img id="imageViewerImg" src="" alt="">
 </div>
 
 <script src="data/galeria.js?v=5"></script>
-<script src="script.js?v=12"></script>
+<script src="app.js?v=1"></script>
 </body>
 </html>
