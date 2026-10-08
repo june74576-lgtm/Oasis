@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oasis · Admin</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="identity.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="data/supabase-config.js?v=4"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+
+<div id="adminApp" class="hidden-app">
+
+    <!-- TOPBAR -->
+    <header class="admin-topbar">
+        <div class="admin-topbar-left">
+            <a href="index.html" class="admin-back-btn" title="Back to Oasis">
+                <span class="material-icons">arrow_back</span>
+            </a>
+            <span class="admin-topbar-title">Oasis · Admin</span>
+        </div>
+        <div class="admin-topbar-right">
+            <div class="admin-user-chip" v-if="currentUser">
+                <img v-if="currentUserPhoto" :src="currentUserPhoto" alt="" class="admin-user-avatar">
+                <div v-else class="admin-user-avatar no-photo-fallback">{{ currentUserInitial }}</div>
+                <span class="admin-user-name">{{ currentUser.nombre }}</span>
+            </div>
+            <button class="admin-signout-btn" @click="signOut" title="Sign out">
+                <span class="material-icons">logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- LAYOUT -->
+    <div class="admin-layout">
+
+        <!-- SIDEBAR -->
+        <aside class="admin-sidebar" :class="{ 'mobile-open': mobileSidebarOpen }">
+            <div class="admin-sidebar-header">
+                <span class="admin-sidebar-title">EXPLORER</span>
+            </div>
+            <nav class="admin-sidebar-nav">
+                <button v-for="item in sidebarItems"
+                        :key="item.id"
+                        class="admin-sidebar-item"
+                        :class="{ active: currentSection === item.id }"
+                        @click="goTo(item.id)">
+                    <span class="material-icons admin-sidebar-icon">{{ item.icon }}</span>
+                    <span class="admin-sidebar-label">{{ item.label }}</span>
+                    <span v-if="item.id === 'courses' && selectedCourse" class="admin-sidebar-badge">
+                        {{ selectedCourse }}
+                    </span>
+                </button>
+            </nav>
+
+            <!-- Selector de curso (solo visible en ciertas secciones) -->
+            <div class="admin-course-picker" v-if="showCoursePicker">
+                <span class="admin-sidebar-title" style="padding:12px 12px 8px;">COURSE</span>
+                <button v-for="c in cursosDisponibles"
+                        :key="c.id"
+                        class="admin-course-pick"
+                        :class="{ active: c.id === selectedCourse }"
+                        @click="selectedCourse = c.id; reloadSection()">
+                    {{ c.nombre }}
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <main class="admin-content">
+
+            <!-- COURSES -->
+            <section v-if="currentSection === 'courses'">
+                <h2 class="admin-section-title">Courses</h2>
+                <p class="admin-section-sub">Edit name, visibility and order.</p>
+
+                <div class="admin-table">
+                    <div class="admin-row admin-row-header">
+                        <span>ID</span><span>Name</span><span>Disabled</span><span>Order</span><span></span>
+                    </div>
+                    <div v-for="c in cursosEditable" :key="c.id" class="admin-row">
+                        <input class="admin-input" v-model="c.id" :disabled="!isAdmin">
+                        <input class="admin-input" v-model="c.nombre" :disabled="!canEditThisCourse(c.id)">
+                        <label class="admin-checkbox">
+                            <input type="checkbox" v-model="c.disabled" :disabled="!isAdmin">
+                            <span>{{ c.disabled ? 'Hidden' : 'Visible' }}</span>
+                        </label>
+                        <input type="number" class="admin-input small" v-model.number="c.orden" :disabled="!isAdmin">
+                        <button class="admin-save-btn" @click="saveCurso(c)" :disabled="!canEditThisCourse(c.id)">
+                            <span class="material-icons">save</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STUDENTS -->
+            <section v-else-if="currentSection === 'students'">
+                <h2 class="admin-section-title">Students</h2>
+                <p class="admin-section-sub">{{ selectedCourse ? 'Editing ' + selectedCourse : 'All courses' }}</p>
+
+                <div class="admin-table">
+                    <div class="admin-row admin-row-header-wide">
+                        <span>Photo</span><span>Name</span><span>Course</span><span>Cargo</span><span>Level</span><span>Birthday</span><span></span>
+                    </div>
+                    <div v-for="s in estudiantesFiltrados" :key="s.id" class="admin-row-wide">
+                        <div class="admin-photo-cell">
+                            <img v-if="s.foto" :src="s.foto" class="admin-thumb" @error="$event.target.style.display='none'">
+                            <div v-else class="admin-thumb no-photo-fallback">—</div>
+                            <input type="file" accept="image/*" hidden :ref="'photo_' + s.id" @change="uploadStudentPhoto(s, $event)">
+                            <button class="admin-upload-mini" @click="$refs['photo_' + s.id][0].click()" :disabled="!canEditStudent(s)">
+                                <span class="material-icons">photo_camera</span>
+                            </button>
+                        </div>
+                        <input class="admin-input" v-model="s.nombre" :disabled="!canEditStudent(s)">
+                        <input class="admin-input small" v-model="s.curso" :disabled="!canEditStudent(s)">
+                        <input class="admin-input small" v-model="s.cargo" :disabled="!canEditStudent(s)">
+                        <input class="admin-input small" v-model="s.nivelIngles" :disabled="!canEditStudent(s)">
+                        <input class="admin-input small" v-model="s.fechaNacimiento" :disabled="!canEditStudent(s)">
+                        <button class="admin-save-btn" @click="saveStudent(s)" :disabled="!canEditStudent(s)">
+                            <span class="material-icons">save</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TEACHERS -->
+            <section v-else-if="currentSection === 'teachers'">
+                <h2 class="admin-section-title">Teachers</h2>
+                <p class="admin-section-sub" v-if="!isAdmin">Only admin can edit teachers.</p>
+
+                <div class="admin-table">
+                    <div class="admin-row admin-row-header-wide">
+                        <span>Photo</span><span>ID</span><span>Name</span><span>Tutor of</span><span></span>
+                    </div>
+                    <div v-for="p in profesores" :key="p.id" class="admin-row-wide">
+                        <div class="admin-photo-cell">
+                            <img v-if="p.foto" :src="p.foto" class="admin-thumb" @error="$event.target.style.display='none'">
+                            <div v-else class="admin-thumb no-photo-fallback">—</div>
+                            <input type="file" accept="image/*" hidden :ref="'profphoto_' + p.id" @change="uploadProfesorPhoto(p, $event)">
+                            <button class="admin-upload-mini" @click="$refs['profphoto_' + p.id][0].click()" :disabled="!isAdmin">
+                                <span class="material-icons">photo_camera</span>
+                            </button>
+                        </div>
+                        <input class="admin-input small" v-model="p.id" :disabled="!isAdmin">
+                        <input class="admin-input" v-model="p.nombre" :disabled="!isAdmin">
+                        <input class="admin-input small" v-model="p.tutor" :disabled="!isAdmin" placeholder="course id">
+                        <button class="admin-save-btn" @click="saveProfesor(p)" :disabled="!isAdmin">
+                            <span class="material-icons">save</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SUBJECTS -->
+            <section v-else-if="currentSection === 'subjects'">
+                <h2 class="admin-section-title">Subjects</h2>
+                <p class="admin-section-sub">Name and order.</p>
+
+                <div class="admin-table">
+                    <div class="admin-row admin-row-header">
+                        <span>ID</span><span>Name</span><span>Order</span><span></span><span></span>
+                    </div>
+                    <div v-for="m in materias" :key="m.id" class="admin-row">
+                        <input class="admin-input" v-model="m.id" :disabled="!isAdmin">
+                        <input class="admin-input" v-model="m.nombre" :disabled="!isAdmin">
+                        <input type="number" class="admin-input small" v-model.number="m.orden" :disabled="!isAdmin">
+                        <button class="admin-save-btn" @click="saveMateria(m)" :disabled="!isAdmin">
+                            <span class="material-icons">save</span>
+                        </button>
+                        <button class="admin-save-btn danger" @click="deleteMateria(m)" :disabled="!isAdmin" title="Delete">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="admin-add-btn" @click="addMateria" :disabled="!isAdmin">
+                    <span class="material-icons">add</span> Add subject
+                </button>
+            </section>
+
+            <!-- SCHEDULES -->
+            <!-- SCHEDULES -->
+            <section v-else-if="currentSection === 'schedules'">
+                <h2 class="admin-section-title">Schedule</h2>
+                <p class="admin-section-sub" v-if="selectedCourse">
+                    Click any cell to edit. Reorder or delete rows with the buttons.
+                </p>
+                <p class="admin-section-sub" v-else>Pick a course in the sidebar.</p>
+
+                <div v-if="!selectedCourse" class="admin-empty">
+                    Select a course in the sidebar.
+                </div>
+
+                <div v-else class="admin-schedule-wrap">
+                    <table class="admin-schedule-table">
+                        <thead>
+                            <tr>
+                                <th class="admin-sched-th-time">Time</th>
+                                <th v-for="d in days" :key="d">{{ dayLabels[d] }}</th>
+                                <th class="admin-sched-th-actions"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(franja, fIdx) in franjasDelCurso" :key="franja.horaKey">
+                                <td class="admin-sched-time">
+                                    <input class="admin-sched-time-input"
+                                        v-model="franja.hora"
+                                        :disabled="!canEditThisCourse(selectedCourse)"
+                                        @change="updateFranjaHora(franja, $event)">
+                                </td>
+                                <td v-for="d in days" :key="d"
+                                    class="admin-sched-cell"
+                                    :class="{ 'is-recreo': franja.tipo === 'recreo' }"
+                                    @click="onCellClick(franja, d)">
+                                    <template v-if="franja.tipo === 'recreo'">
+                                        <span class="admin-sched-recreo">{{ franja.label || 'Break' }}</span>
+                                    </template>
+                                    <template v-else>
+                                        <span v-if="franja[d]" class="admin-sched-materia">{{ materiaNombre(franja[d].materia) }}</span>
+                                        <span v-else class="admin-sched-free">Free</span>
+                                    </template>
+                                </td>
+                                <td class="admin-sched-actions">
+                                    <button class="admin-sched-btn" @click="moveFranja(fIdx, -1)" :disabled="fIdx === 0 || !canEditThisCourse(selectedCourse)" title="Move up">
+                                        <span class="material-icons">arrow_upward</span>
+                                    </button>
+                                    <button class="admin-sched-btn" @click="moveFranja(fIdx, 1)" :disabled="fIdx === franjasDelCurso.length - 1 || !canEditThisCourse(selectedCourse)" title="Move down">
+                                        <span class="material-icons">arrow_downward</span>
+                                    </button>
+                                    <button class="admin-sched-btn danger" @click="deleteFranja(franja)" :disabled="!canEditThisCourse(selectedCourse)" title="Delete row">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="admin-schedule-actions">
+                        <button class="admin-add-btn" @click="addFranja" :disabled="!canEditThisCourse(selectedCourse)">
+                            <span class="material-icons">add</span> Add time slot
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal de edición de celda -->
+                <div v-if="cellEditor.open" class="admin-cell-modal-overlay" @click.self="closeCellEditor">
+                    <div class="admin-cell-modal">
+                        <h3>Edit cell</h3>
+                        <p class="admin-cell-modal-sub">
+                            {{ cellEditor.franja ? cellEditor.franja.hora : '' }} · {{ dayLabels[cellEditor.day] }}
+                        </p>
+
+                        <label class="admin-cell-label">Subject</label>
+                        <select v-model="cellEditor.materia" class="admin-input">
+                            <option value="">— Free —</option>
+                            <option v-for="m in materias" :key="m.id" :value="m.id">{{ m.nombre }}</option>
+                        </select>
+
+                        <label class="admin-cell-label">Teacher</label>
+                        <select v-model="cellEditor.profesor" class="admin-input">
+                            <option value="">— No teacher —</option>
+                            <option v-for="p in profesores" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+                        </select>
+
+                        <div class="admin-cell-modal-actions">
+                            <button class="admin-cell-cancel" @click="closeCellEditor">Cancel</button>
+                            <button class="admin-cell-save" @click="saveCellEditor">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GALLERY -->
+            <section v-else-if="currentSection === 'gallery'">
+                <h2 class="admin-section-title">Gallery (local)</h2>
+                <p class="admin-section-sub">{{ selectedCourse ? 'Editing ' + selectedCourse : 'Pick a course first' }}</p>
+
+                <div v-if="!selectedCourse" class="admin-empty">
+                    Select a course in the sidebar.
+                </div>
+
+                <div v-else class="admin-gallery-list">
+                    <div v-for="g in galeriaDelCurso" :key="g.id" class="admin-gallery-item">
+                        <img :src="g.ruta" :alt="''" @error="$event.target.style.opacity = 0.2">
+                        <div class="admin-gallery-info">
+                            <input class="admin-input" v-model="g.ruta" :disabled="!canEditThisCourse(g.curso)">
+                            <input type="number" class="admin-input small" v-model.number="g.orden" :disabled="!canEditThisCourse(g.curso)">
+                        </div>
+                        <button class="admin-save-btn" @click="saveGaleriaFoto(g)" :disabled="!canEditThisCourse(g.curso)">
+                            <span class="material-icons">save</span>
+                        </button>
+                        <button class="admin-save-btn danger" @click="deleteGaleriaFoto(g)" :disabled="!canEditThisCourse(g.curso)">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- SNACKBAR -->
+    <div class="admin-snackbar" :class="snackbar.type" v-if="snackbar.visible">
+        {{ snackbar.message }}
+    </div>
+
+</div>
+
+<div class="login-screen" id="loginScreen">
+    <h1 class="login-wordmark">Oasis</h1>
+    <div class="login-sheet">
+        <div class="login-form-wrap">
+            <h2 class="login-form-title">Admin Access</h2>
+            <div class="login-field">
+                <label class="login-field-label" for="loginUserInput">USERNAME</label>
+                <input type="text" id="loginUserInput" class="login-field-input" placeholder="yourname" autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label class="login-field-label" for="loginPassInput">PASSWORD</label>
+                <input type="password" id="loginPassInput" class="login-field-input" placeholder="••••••" autocomplete="current-password">
+            </div>
+            <p class="login-error-msg" id="loginErrorMsg" style="display:none;">Wrong username or password</p>
+            <button class="login-btn" id="loginSubmitBtn" type="button">Sign In</button>
+        </div>
+    </div>
+</div>
+
+<script src="admin.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,661 @@
+/* ============================================================
+   OASIS ADMIN
+   ============================================================ */
+
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 20px;
+    background: rgba(10, 10, 14, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--ln-1);
+}
+
+.admin-topbar-left { display: flex; align-items: center; gap: 12px; }
+.admin-topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.admin-back-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-3);
+    border: 1px solid var(--ln-1);
+    border-radius: 50%;
+    color: var(--tx-2);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--t-base) var(--ease-out);
+}
+.admin-back-btn:hover { background: var(--bg-5); color: var(--tx-1); }
+
+.admin-topbar-title {
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--tx-2);
+}
+
+.admin-user-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 14px 5px 5px;
+    background: var(--bg-3);
+    border: 1px solid var(--ln-1);
+    border-radius: var(--r-full);
+    font-size: 13px;
+    color: var(--tx-2);
+    max-width: 220px;
+}
+
+.admin-user-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-5);
+    flex-shrink: 0;
+}
+.admin-user-avatar.no-photo-fallback {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ac-2);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.admin-user-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-signout-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid var(--ln-1);
+    border-radius: 50%;
+    color: var(--tx-3);
+    cursor: pointer;
+    transition: background var(--t-base) var(--ease-out), color var(--t-base) var(--ease-out);
+}
+.admin-signout-btn:hover {
+    background: rgba(255, 138, 149, 0.12);
+    border-color: var(--st-danger);
+    color: var(--st-danger);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.admin-layout {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    align-items: flex-start;
+}
+
+.admin-sidebar {
+    flex: 0 0 240px;
+    width: 240px;
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding: 10px;
+    background: rgba(16, 16, 21, 0.5);
+    border: 1px solid var(--ln-1);
+    border-radius: var(--r-lg);
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg-5) transparent;
+}
+
+.admin-sidebar::-webkit-scrollbar { width: 4px; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: var(--bg-5); border-radius: 999px; }
+
+.admin-sidebar-header { padding: 8px 10px 12px; }
+
+.admin-sidebar-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tx-4);
+}
+
+.admin-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    color: var(--tx-3);
+    font-family: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+
+.admin-sidebar-item:hover {
+    background: var(--bg-3);
+    color: var(--tx-1);
+}
+
+.admin-sidebar-item.active {
+    background: var(--bg-4);
+    color: var(--ac-2);
+}
+
+.admin-sidebar-icon { font-size: 18px; }
+.admin-sidebar-label { flex: 1; }
+
+.admin-sidebar-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    background: var(--ac-dim, rgba(198, 184, 255, 0.12));
+    color: var(--ac-2);
+    border-radius: var(--r-full);
+}
+
+.admin-course-picker {
+    border-top: 1px solid var(--ln-1);
+    margin-top: 12px;
+    padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-course-pick {
+    text-align: left;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    color: var(--tx-3);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.admin-course-pick:hover { background: var(--bg-3); color: var(--tx-1); }
+.admin-course-pick.active { background: var(--bg-4); color: var(--ac-2); }
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+.admin-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-section-title {
+    font-size: 24px;
+    color: var(--tx-1);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.admin-section-sub {
+    color: var(--tx-4);
+    font-size: 13px;
+    margin-bottom: 24px;
+}
+
+.admin-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--tx-4);
+    font-style: italic;
+    background: var(--bg-3);
+    border: 1px dashed var(--ln-2);
+    border-radius: var(--r-lg);
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+.admin-table {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-row,
+.admin-row-wide {
+    display: grid;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--bg-3);
+    border: 1px solid var(--ln-1);
+    border-radius: var(--r-md);
+}
+
+.admin-row {
+    grid-template-columns: 100px 1fr 120px 80px 40px;
+}
+.admin-row-header {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tx-4);
+}
+
+.admin-row-wide {
+    grid-template-columns: 80px 1.5fr 100px 1.2fr 100px 130px 40px;
+}
+.admin-row-header-wide {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tx-4);
+    display: grid;
+    grid-template-columns: 80px 1.5fr 100px 1.2fr 100px 130px 40px;
+    gap: 8px;
+}
+
+.admin-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--ln-1);
+    border-radius: var(--r-sm);
+    color: var(--tx-2);
+    font-family: inherit;
+    font-size: 13px;
+    transition: border-color var(--t-fast) var(--ease-out);
+}
+.admin-input:focus {
+    outline: none;
+    border-color: var(--ac-2);
+    background: var(--bg-3);
+}
+.admin-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.admin-input.small { font-size: 12.5px; padding: 7px 10px; }
+
+.admin-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--tx-3);
+    cursor: pointer;
+}
+
+.admin-save-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ac-dim, rgba(198, 184, 255, 0.12));
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--ac-2);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.admin-save-btn:hover:not(:disabled) { background: var(--ac-2); color: var(--ac-text); }
+.admin-save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.admin-save-btn.danger { color: var(--st-danger); background: rgba(255, 138, 149, 0.12); }
+.admin-save-btn.danger:hover:not(:disabled) { background: var(--st-danger); color: var(--bg-0); }
+.admin-save-btn .material-icons { font-size: 18px; }
+
+.admin-add-btn {
+    margin-top: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--ac-2);
+    color: var(--ac-text);
+    border: none;
+    border-radius: var(--r-full);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--t-base) var(--ease-out);
+}
+.admin-add-btn:hover { background: var(--ac-1); }
+.admin-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============================================================
+   PHOTO CELL
+   ============================================================ */
+.admin-photo-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-thumb {
+    width: 44px; height: 44px;
+    border-radius: var(--r-sm);
+    object-fit: cover;
+    background: var(--bg-5);
+    flex-shrink: 0;
+}
+.admin-thumb.no-photo-fallback {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--tx-4);
+    font-size: 14px;
+}
+
+.admin-upload-mini {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-4);
+    border: 1px solid var(--ln-1);
+    border-radius: 50%;
+    color: var(--tx-3);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.admin-upload-mini:hover:not(:disabled) { background: var(--ac-2); color: var(--ac-text); }
+.admin-upload-mini:disabled { opacity: 0.3; cursor: not-allowed; }
+.admin-upload-mini .material-icons { font-size: 16px; }
+
+/* ============================================================
+   GALLERY LIST
+   ============================================================ */
+.admin-gallery-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-gallery-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px 40px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    background: var(--bg-3);
+    border: 1px solid var(--ln-1);
+    border-radius: var(--r-md);
+}
+
+.admin-gallery-item img {
+    width: 80px; height: 80px;
+    object-fit: cover;
+    border-radius: var(--r-sm);
+    background: var(--bg-5);
+}
+
+.admin-gallery-info {
+    display: grid;
+    grid-template-columns: 1fr 80px;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ============================================================
+   SNACKBAR
+   ============================================================ */
+.admin-snackbar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 24px;
+    background: var(--bg-4);
+    border: 1px solid var(--ln-2);
+    border-radius: var(--r-full);
+    color: var(--tx-1);
+    font-size: 13px;
+    box-shadow: var(--sh-lg);
+    z-index: 2000;
+    animation: id-slide-up 0.35s var(--ease-spring);
+}
+.admin-snackbar.success { border-color: var(--st-success); color: var(--st-success); }
+.admin-snackbar.error   { border-color: var(--st-danger);  color: var(--st-danger); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+    .admin-layout { padding: 12px; gap: 0; flex-direction: column; }
+
+    .admin-sidebar {
+        position: fixed;
+        top: 70px; left: 12px; right: 12px;
+        width: auto;
+        max-width: 400px;
+        margin: 0 auto;
+        max-height: calc(100vh - 90px);
+        z-index: 100;
+        background: var(--bg-4);
+        display: none;
+    }
+    .admin-sidebar.mobile-open {
+        display: block;
+        animation: id-scale-in 0.25s var(--ease-out);
+    }
+
+    .admin-row-wide,
+    .admin-row-header-wide {
+        grid-template-columns: 1fr;
+    }
+    .admin-row { grid-template-columns: 1fr; }
+
+    .admin-gallery-item { grid-template-columns: 60px 1fr 34px 34px; }
+    .admin-gallery-item img { width: 60px; height: 60px; }
+}
+
+/* ============================================================
+   SCHEDULE GRID (admin)
+   ============================================================ */
+.admin-schedule-wrap {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.admin-schedule-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+    min-width: 720px;
+}
+
+.admin-schedule-table th {
+    background: var(--bg-4);
+    color: var(--tx-2);
+    padding: 10px 8px;
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 400;
+}
+
+.admin-sched-th-time { width: 120px; }
+.admin-sched-th-actions { width: 120px; }
+
+.admin-sched-time { background: var(--bg-2); border-radius: var(--r-sm); padding: 4px; }
+
+.admin-sched-time-input {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed transparent;
+    border-radius: var(--r-sm);
+    padding: 8px;
+    color: var(--tx-2);
+    font-family: inherit;
+    font-size: 11px;
+    text-align: center;
+    cursor: text;
+    transition: border-color .15s;
+}
+.admin-sched-time-input:hover { border-color: var(--ln-2); }
+.admin-sched-time-input:focus {
+    outline: none;
+    border-color: var(--ac-2);
+    background: var(--bg-3);
+}
+
+.admin-sched-cell {
+    background: var(--bg-3);
+    border-radius: var(--r-sm);
+    padding: 14px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: background .15s;
+    min-height: 44px;
+}
+.admin-sched-cell:hover { background: var(--bg-5); }
+.admin-sched-cell.is-recreo {
+    background: var(--bg-4);
+    cursor: default;
+}
+
+.admin-sched-materia {
+    font-size: 12.5px;
+    color: var(--ac-2);
+}
+.admin-sched-free {
+    font-size: 12px;
+    color: var(--tx-4);
+    font-style: italic;
+}
+.admin-sched-recreo {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tx-3);
+}
+
+.admin-sched-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+}
+
+.admin-sched-btn {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid var(--ln-1);
+    border-radius: 50%;
+    color: var(--tx-3);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.admin-sched-btn:hover:not(:disabled) {
+    background: var(--bg-5);
+    color: var(--tx-1);
+}
+.admin-sched-btn.danger:hover:not(:disabled) {
+    background: rgba(255, 138, 149, .15);
+    color: var(--st-danger);
+}
+.admin-sched-btn:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+}
+.admin-sched-btn .material-icons { font-size: 14px; }
+
+.admin-schedule-actions {
+    margin-top: 16px;
+}
+
+/* ============================================================
+   CELL EDITOR MODAL
+   ============================================================ */
+.admin-cell-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 8, .75);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.admin-cell-modal {
+    background: var(--bg-4);
+    border: 1px solid var(--ln-2);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: var(--sh-lg);
+    animation: id-scale-in 0.25s var(--ease-out);
+}
+
+.admin-cell-modal h3 {
+    font-size: 18px;
+    color: var(--tx-1);
+    margin-bottom: 4px;
+    font-weight: 400;
+}
+
+.admin-cell-modal-sub {
+    color: var(--tx-4);
+    font-size: 12px;
+    margin-bottom: 20px;
+}
+
+.admin-cell-label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tx-4);
+    margin-bottom: 6px;
+    margin-top: 14px;
+}
+
+.admin-cell-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.admin-cell-cancel {
+    padding: 9px 18px;
+    background: transparent;
+    border: 1px solid var(--ln-2);
+    border-radius: var(--r-full);
+    color: var(--tx-3);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.admin-cell-cancel:hover { background: var(--bg-3); color: var(--tx-1); }
+
+.admin-cell-save {
+    padding: 9px 20px;
+    background: var(--ac-2);
+    border: none;
+    border-radius: var(--r-full);
+    color: var(--ac-text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.admin-cell-save:hover { background: var(--ac-1); }

@@ -1,3 +1,6 @@
+/* ============================================================
+   MAPEO: Identity (Calima) → Oasis
+   ============================================================ */
 :root{
     --bg:#131316;
     --surface:#1c1b1f;
@@ -32,8 +35,7 @@
 body{
     background:var(--bg);
     color:var(--on-surface);
-    font-family:"Roboto Flex",system-ui,sans-serif;
-    font-variation-settings:"opsz" 20, "wght" 400;
+    font-family:'Varela Round', system-ui, sans-serif;
     min-height:100vh;
 }
 
@@ -66,7 +68,7 @@ button{ font-family:inherit; }
 .fs-menu:hover{ background:var(--primary-container); color:var(--on-primary-container); }
 .fs-menu svg{ width:18px; height:18px; }
 .fs-topbar-title{
-    font-size:16px; font-variation-settings:"wght" 700; letter-spacing:.3px;
+    font-size:16px; letter-spacing:.3px;
     color:var(--on-surface);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
@@ -79,7 +81,7 @@ button{ font-family:inherit; }
 .fs-section{ margin-bottom:64px; }
 
 .fs-section-header{ text-align:center; margin-bottom:24px; }
-.fs-section-header h2{ font-size:24px; font-variation-settings:"wght" 700; }
+.fs-section-header h2{ font-size:24px; }
 
 .divider-pill{
     width:64px; height:6px; border-radius:var(--radius-full);
@@ -112,7 +114,6 @@ button{ font-family:inherit; }
     position:relative; z-index:2;
     padding:28px 32px;
     font-size:32px;
-    font-variation-settings:"wght" 700;
     letter-spacing:-.4px;
     line-height:1.15;
     color:#fff;
@@ -157,7 +158,7 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     padding:10px 2px 12px; font-size:12px; cursor:pointer; position:relative; transition:.2s;
     -webkit-tap-highlight-color:transparent;
 }
-.day-tab.active{ color:var(--primary); font-variation-settings:"wght" 700; }
+.day-tab.active{ color:var(--primary); }
 .day-tab.active::after{
     content:""; position:absolute; bottom:-1px; left:15%; right:15%;
     height:2px; background:var(--primary); border-radius:2px;
@@ -314,7 +315,7 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     scrollbar-width:none;
 }
 .mini-modal::-webkit-scrollbar{ display:none; }
-.mini-modal h3{ font-size:22px; font-variation-settings:"wght" 700; }
+.mini-modal h3{ font-size:22px; }
 
 .modal-close{
     position:absolute; top:20px; right:20px; width:36px; height:36px;
@@ -494,7 +495,7 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 .drawer-title{
     flex-shrink:0;
     font-size:12px; letter-spacing:2px; text-transform:uppercase;
-    color:var(--tertiary); font-variation-settings:"wght" 700;
+    color:var(--tertiary); 
 }
 
 .drawer-user{
@@ -586,7 +587,7 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     border-radius:0 var(--radius-full) var(--radius-full) 0;
 }
 .drawer-course-item:hover{ background:var(--surface-3); }
-.drawer-course-item.active{ background:var(--primary-container); color:var(--on-primary-container); font-variation-settings:"wght" 700; }
+.drawer-course-item.active{ background:var(--primary-container); color:var(--on-primary-container); }
 .drawer-course-item.disabled{ opacity:.4; cursor:not-allowed; }
 .drawer-course-name{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .drawer-course-badge{
@@ -667,7 +668,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     border-radius:0 var(--radius-full) var(--radius-full) 0;
     color:#fff;
     font-size:22px;
-    font-variation-settings:"wght" 700;
     letter-spacing:.3px;
     line-height:1.15;
     overflow:hidden;
@@ -719,7 +719,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 .student-fs-name{
     grid-column:1 / -1;
     font-size:clamp(24px, 2.8vw, 40px);
-    font-variation-settings:"wght" 700;
     letter-spacing:-.4px; line-height:1.1;
     margin-bottom:6px;
 }
@@ -899,7 +898,7 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 .announcements-open-btn span:first-of-type{ flex:1; text-align:left; }
 .announcements-count{
     background:rgba(255,255,255,.14); color:currentColor;
-    font-size:11px; font-variation-settings:"wght" 700;
+    font-size:11px; 
     padding:3px 10px; border-radius:var(--radius-full); flex-shrink:0;
 }
 .announcements-count:empty{ display:none; }
@@ -999,7 +998,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 
 .msg-author{
     font-size:14px;
-    font-variation-settings:"wght" 700;
     color:var(--on-surface);
     letter-spacing:-.1px;
 }
@@ -1012,7 +1010,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     color:var(--on-tertiary);
     padding:3px 10px;
     border-radius:var(--radius-full);
-    font-variation-settings:"wght" 700;
     box-shadow:0 2px 8px rgba(240,183,208,.3);
     white-space:nowrap;
 }
@@ -1177,20 +1174,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     .timeline-item.chain-end{ margin-bottom:12px; }
 }
 
-/* ===== Sheets button in topbar ===== */
-
-.fs-sheets{
-    margin-left:auto;
-    width:38px; height:38px; border-radius:50%; flex-shrink:0;
-    background:var(--surface-3); border:none;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:.2s;
-    -webkit-tap-highlight-color:transparent;
-    text-decoration:none;
-}
-.fs-sheets:hover{ background:var(--primary-container); }
-.fs-sheets svg{ width:20px; height:20px; display:block; }
-
 .msg-body{
     font-size:14px;
     line-height:1.55;
@@ -1204,7 +1187,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 .msg-body p:last-child{ margin-bottom:0; }
 
 .msg-body strong{
-    font-variation-settings:"wght" 700;
     color:var(--on-surface);
 }
 .msg-body em{ font-style:italic; }
@@ -1263,7 +1245,6 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
 .msg-body h1, .msg-body h2, .msg-body h3,
 .msg-body h4, .msg-body h5, .msg-body h6{
     font-size:15px;
-    font-variation-settings:"wght" 700;
     margin:8px 0 4px;
     color:var(--on-surface);
     letter-spacing:-.1px;
@@ -1283,3 +1264,146 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     margin:4px 0;
     display:block;
 }
+
+/* ============================================================
+   LOGIN SCREEN
+   ============================================================ */
+.login-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.login-screen.hidden { display: none; }
+
+.login-wordmark {
+    font-family: 'Varela Round', sans-serif;
+    font-size: 44px;
+    letter-spacing: 1.5px;
+    color: var(--primary);
+    text-align: center;
+    margin: 48px 0 28px;
+    animation: id-fade-in 0.6s ease-out;
+}
+
+.login-sheet {
+    flex: 1;
+    width: 100%;
+    background: var(--surface);
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: id-slide-up 0.55s ease-out;
+}
+
+.login-form-wrap {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.login-form-title {
+    font-size: 28px;
+    letter-spacing: 0.5px;
+    color: var(--on-surface);
+    text-align: left;
+    margin: 0 0 12px;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.login-field-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--on-surface-var);
+    padding-left: 4px;
+}
+
+.login-field-input {
+    width: 100%;
+    height: 52px;
+    padding: 0 20px;
+    background: var(--surface-2);
+    color: var(--on-surface);
+    border: 1px solid var(--outline);
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color .25s ease, background .25s ease;
+}
+
+.login-field-input::placeholder { color: var(--on-surface-var); opacity: .6; }
+
+.login-field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface-3);
+}
+
+.login-btn {
+    width: 100%;
+    height: 52px;
+    margin-top: 4px;
+    padding: 0 24px;
+    background: var(--primary);
+    color: var(--on-primary);
+    border: none;
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background .25s ease, transform .15s ease;
+}
+
+.login-btn:hover  { background: var(--primary-container); color: var(--on-primary-container); }
+.login-btn:active { transform: scale(0.98); }
+
+.login-error-msg {
+    color: #ff8a8a;
+    font-size: 13px;
+    text-align: center;
+    margin-top: -6px;
+}
+
+@media (max-width: 380px) {
+    .login-wordmark { font-size: 36px; margin: 32px 0 20px; }
+    .login-sheet    { padding: 32px 20px; }
+    .login-form-title { font-size: 24px; }
+    .login-field-input,
+    .login-btn { height: 48px; }
+}
+
+@media (min-width: 720px) {
+    .login-screen { justify-content: center; padding: 24px; overflow: auto; }
+    .login-sheet {
+        flex: 0 1 auto;
+        width: 100%;
+        max-width: 420px;
+        background: var(--surface-2);
+        border: 1px solid var(--outline);
+        border-radius: var(--radius-xl);
+        padding: 48px 40px 40px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .login-screen .login-wordmark { font-size: 38px; margin: 0 0 32px; }
+}
+
+#app.hidden-app { display: none; }

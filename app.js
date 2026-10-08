@@ -1,5 +1,5 @@
 /* ============================================================
-   Oasis — Vue 3 (CDN, sin build)
+   Oasis — Vue 3 + Supabase (todo desde DB, sin Sheets)
    ============================================================ */
 
 const { createApp } = Vue;
@@ -12,38 +12,16 @@ const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
     <path d="M14 3.5V8h4"/>
 </svg>`;
 
-const SHEET_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQwtv1pKkVC9H4oYBWueNmh_69NrqJxsea1g_szh0gh_gyDrNA1Y5p1yxUB-h28QmyTm8nmTWqA2QC/pub";
-const SHEET_GIDS = {
-    cursos:      "1898434317",
-    estudiantes: "1865962054",
-    profesores:  "546336295",
-    materias:    "1091567357",
-    niveles:     "2018604320",
-    horarios:    "1332361361",
-    "2ITA":      "1075604004",
-    "2ITB":      "2045168297",
-    "2CNB":      "923150775"
-};
-function sheetUrl(gid) {
-    return `${SHEET_BASE}?gid=${gid}&single=true&output=csv`;
-}
-
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_GALERIA_SIZE = 10 * 1024 * 1024;
 
-
-/* ===== Markdown ===== */
+/* Markdown */
 if (window.marked) {
-    window.marked.setOptions({
-        breaks: true,       // saltos de línea simples → <br> (como GitHub / WhatsApp)
-        gfm: true,          // tablas, ~~tachado~~, autolinks
-        headerIds: false,   // sin id="..." en headings (no los usamos)
-        mangle: false       // no ofuscar emails
-    });
+    window.marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
 }
 
 /* ============================================================
-   Utilidades puras (no dependen del estado de Vue)
+   Utilidades
    ============================================================ */
 function normalize(str) {
     return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -95,50 +73,8 @@ function shortLabel(name, max = 9) {
     return name.slice(0, max - 1).trimEnd() + "…";
 }
 
-/* CSV helpers */
-function parseCSVRows(text) {
-    const rows = [];
-    let row = [], cur = "", inQ = false;
-    for (let i = 0; i < text.length; i++) {
-        const c = text[i];
-        if (inQ) {
-            if (c === '"') {
-                if (text[i+1] === '"') { cur += '"'; i++; }
-                else inQ = false;
-            } else cur += c;
-        } else {
-            if (c === '"') inQ = true;
-            else if (c === ",") { row.push(cur); cur = ""; }
-            else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
-            else if (c === "\r") {}
-            else cur += c;
-        }
-    }
-    if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
-    return rows;
-}
-function csvToObjects(text) {
-    const rows = parseCSVRows(text.trim());
-    if (rows.length === 0) return [];
-    const header = rows[0].map(h => h.trim());
-    return rows.slice(1)
-        .filter(r => r.some(c => c !== ""))
-        .map(r => {
-            const obj = {};
-            header.forEach((h, i) => { obj[h] = (r[i] || "").trim(); });
-            return obj;
-        });
-}
-async function loadSheet(name) {
-    const gid = SHEET_GIDS[name];
-    if (!gid || gid.startsWith("REEMPLAZAR")) return [];
-    const res = await fetch(sheetUrl(gid));
-    if (!res.ok) throw new Error("HTTP " + res.status + " en " + name);
-    return csvToObjects(await res.text());
-}
-
 /* ============================================================
-   Componente PhotoSlot (reutilizable)
+   PhotoSlot
    ============================================================ */
 const PhotoSlot = {
     name: "PhotoSlot",
@@ -149,9 +85,7 @@ const PhotoSlot = {
     },
     emits: ["zoom"],
     data() { return { failed: false }; },
-    watch: {
-        src() { this.failed = false; }
-    },
+    watch: { src() { this.failed = false; } },
     template: `
         <div class="photo-slot" :class="{ zoomable }">
             <img v-if="src && !failed"
@@ -164,40 +98,61 @@ const PhotoSlot = {
 };
 
 /* ============================================================
-   App principal
+   Login screen (fuera de Vue, HTML puro)
    ============================================================ */
-createApp({
+const loginScreen = document.getElementById("loginScreen");
+const loginUserInput = document.getElementById("loginUserInput");
+const loginPassInput = document.getElementById("loginPassInput");
+const loginErrorMsg = document.getElementById("loginErrorMsg");
+const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+const appRoot = document.getElementById("app");
+
+/* Expuesto globalmente para que Vue pueda llamar desde adentro */
+window.__oasisShowLogin = function () {
+    appRoot.classList.add("hidden-app");
+    loginScreen.classList.remove("hidden");
+    loginUserInput.value = "";
+    loginPassInput.value = "";
+    loginErrorMsg.style.display = "none";
+    setTimeout(() => loginUserInput.focus(), 100);
+};
+
+window.__oasisHideLogin = function () {
+    loginScreen.classList.add("hidden");
+    appRoot.classList.remove("hidden-app");
+};
+
+/* ============================================================
+   App
+   ============================================================ */
+const app = createApp({
     components: { PhotoSlot },
 
     data() {
         return {
-            /* Datos desde Sheets */
             cursos: [],
             estudiantes: [],
             profesores: [],
             materias: [],
-            horarios: {},     // { cursoId: [ row, row, ... ] }
-            notas: {},        // { studentId: { materiaId: [n1, n2, ...] } }
+            horarios: {},
+            notas: {},
+            galeriaLocal: [],
 
-            /* Estado general */
             currentCourse: null,
             dayTab: 0,
             viewportWidth: window.innerWidth,
 
-            /* Drawer */
             drawerOpen: false,
             drawerUserMenuOpen: false,
 
-            /* Auth */
             currentUser: null,
+            currentUserIsAdmin: false,
 
-            /* Login modal */
             loginOpen: false,
             loginUser: "",
             loginPass: "",
             loginError: false,
 
-            /* Materia modal */
             materiaOpen: false,
             materiaBaseId: null,
             materiaNivelId: null,
@@ -209,14 +164,12 @@ createApp({
             materiaProfNombre: "",
             profPhotoFailed: false,
 
-            /* Student modal */
             studentOpen: false,
             studentSelected: null,
             studentContrib: "-",
             studentPhotoFailed: false,
             radarOpen: false,
 
-            /* Announcements */
             announcementsOpen: false,
             announcementsLoading: false,
             announcements: [],
@@ -225,51 +178,38 @@ createApp({
             announcementsSending: false,
             announcementsCount: 0,
 
-            /* Gallery */
             galeriaExtra: [],
             galleryUploading: false,
 
-            /* Dropzones */
             dropMateriaDragging: false,
             dropGaleriaDragging: false,
 
-            /* Image viewer */
             imageViewerOpen: false,
             imageViewerSrc: "",
 
-            /* Constantes expuestas al template */
             FILE_ICON_SVG,
 
-            /* Timers internos (no reactivos, pero ok acá) */
             _galeriaTimer: null,
             _galeriaResume: null,
-            _galeriaListeners: false
+            _galeriaListeners: false,
+            _dataLoaded: false
         };
     },
 
     computed: {
-        /* ---------- Supabase disponible ---------- */
         supabaseReady() {
             return typeof supabaseClient !== "undefined"
                 && supabaseClient !== null
                 && typeof supabaseClient.from === "function";
         },
+        cursosDisponibles() { return this.cursos.filter(c => !c.disabled); },
+        currentCourseObj() { return this.cursos.find(c => c.id === this.currentCourse) || null; },
 
-        /* ---------- Cursos ---------- */
-        cursosDisponibles() {
-            return this.cursos.filter(c => !c.disabled);
-        },
-        currentCourseObj() {
-            return this.cursos.find(c => c.id === this.currentCourse) || null;
-        },
-
-        /* ---------- Tutor ---------- */
         tutor() {
             if (!this.currentCourse) return null;
             return this.profesores.find(p => p.tutor === this.currentCourse) || null;
         },
 
-        /* ---------- Horario: tabla desktop ---------- */
         horarioRows() {
             if (!this.currentCourse) return [];
             return this.horarios[this.currentCourse] || [];
@@ -302,8 +242,6 @@ createApp({
                 })
             }));
         },
-
-        /* ---------- Horario: timeline mobile ---------- */
         horarioMobilePanels() {
             const rows = this.horarioRows;
             return days.map(day => {
@@ -344,20 +282,19 @@ createApp({
             });
         },
 
-        /* ---------- Estudiantes ---------- */
         studentsList() {
             if (!this.currentCourse) return [];
             return this.estudiantes.filter(e => e.curso === this.currentCourse);
         },
 
-        /* ---------- Galería ---------- */
-        galeriaLocal() {
-            if (typeof galeriaDB === "undefined" || !this.currentCourse) return [];
-            const g = galeriaDB[this.currentCourse] || [];
-            return g.map(x => ({ ruta: x.ruta }));
+        galeriaLocalCurso() {
+            if (!this.currentCourse) return [];
+            return this.galeriaLocal
+                .filter(g => g.curso === this.currentCourse)
+                .map(g => ({ ruta: g.ruta }));
         },
         galeriaAll() {
-            return this.galeriaLocal.concat(this.galeriaExtra);
+            return this.galeriaLocalCurso.concat(this.galeriaExtra);
         },
         galeriaDoubled() {
             return this.galeriaAll.concat(this.galeriaAll);
@@ -368,7 +305,7 @@ createApp({
             return { animation: `galeriaScroll ${duration}s linear infinite` };
         },
         canUploadGaleria() {
-            return !!(this.currentUser && !this.currentUser.isAdmin
+            return !!(this.currentUser && !this.currentUserIsAdmin
                 && this.supabaseReady && this.currentCourse);
         },
         galeriaHint() {
@@ -376,10 +313,7 @@ createApp({
             return "Sign in to add photos to the gallery.";
         },
 
-        /* ---------- Materia modal ---------- */
-        materiaBase() {
-            return this.findMateria(this.materiaBaseId);
-        },
+        materiaBase() { return this.findMateria(this.materiaBaseId); },
         materiaNombreActual() {
             return this.materiaBase ? this.materiaBase.nombre : (this.materiaBaseId || "");
         },
@@ -407,7 +341,6 @@ createApp({
             return "Sign in to upload files.";
         },
 
-        /* ---------- Student modal ---------- */
         bestWorst() {
             if (!this.studentSelected) return { best: null, worst: null };
             const avgs = this.getStudentAverages(this.studentSelected.id);
@@ -425,7 +358,6 @@ createApp({
         radarSvgHtml() {
             if (!this.studentSelected) return "";
             const id = this.studentSelected.id;
-
             const averages = this.getStudentAverages(id);
             if (averages) {
                 const entries = Object.entries(averages)
@@ -437,7 +369,6 @@ createApp({
                     return this.buildRadarSvg(subjects, values, true);
                 }
             }
-
             const subjectIds = this.getStudentSubjects(id).filter(mid => !!this.findMateria(mid));
             if (subjectIds.length < 3) return "";
             const subjects = subjectIds
@@ -450,13 +381,12 @@ createApp({
             return this.viewportWidth <= 800 && this.studentSelected.cargo.length > 18;
         },
 
-        /* ---------- Announcements ---------- */
         canPostAnnouncement() {
             if (!this.currentUser || !this.supabaseReady || !this.currentCourse) return false;
             const me = this.getStudentById(this.currentUser.id);
             if (!me) return false;
             if (me.curso !== this.currentCourse) return false;
-            return !!(me.cargo && me.cargo.trim());
+            return !!(me.cargo && me.cargo.trim()) || this.currentUserIsAdmin;
         },
         announcementsHint() {
             if (!this.currentUser) return "Sign in to see announcements.";
@@ -465,14 +395,19 @@ createApp({
             return "";
         },
 
-        /* ---------- Auth ---------- */
         currentUserPhoto() {
             if (!this.currentUser) return "";
             const me = this.getStudentById(this.currentUser.id);
             return this.currentUser.foto || (me ? me.foto : "");
         },
 
-        /* ---------- Scroll lock ---------- */
+        canAccessAdmin() {
+            if (!this.currentUser) return false;
+            if (this.currentUserIsAdmin) return true;
+            const me = this.getStudentById(this.currentUser.id);
+            return !!(me && me.cargo && me.cargo.trim());
+        },
+
         scrollLocked() {
             return this.drawerOpen || this.materiaOpen || this.studentOpen
                 || this.announcementsOpen || this.loginOpen || this.imageViewerOpen;
@@ -480,18 +415,12 @@ createApp({
     },
 
     watch: {
-        scrollLocked(v) {
-            document.body.style.overflow = v ? "hidden" : "";
-        },
-        "galeriaAll.length"() {
-            this.$nextTick(() => this.setupGalleryAutoScroll());
-        }
+        scrollLocked(v) { document.body.style.overflow = v ? "hidden" : ""; },
+        "galeriaAll.length"() { this.$nextTick(() => this.setupGalleryAutoScroll()); }
     },
 
     methods: {
-        /* ========================================================
-           Búsquedas / helpers
-           ======================================================== */
+        /* ---------- Helpers ---------- */
         findMateria(id) { return this.materias.find(m => m.id === id); },
         findProfesor(id) { return this.profesores.find(p => p.id === id); },
         getStudentById(id) { return this.estudiantes.find(e => e.id === id); },
@@ -517,142 +446,142 @@ createApp({
             return student.nivelIngles.toLowerCase().startsWith("advanced") ? "advanced" : "intermedio";
         },
 
-        /* ========================================================
-           Carga de datos (Google Sheets + Notas)
-           ======================================================== */
+        /* ---------- Admin ---------- */
+        goToAdmin() {
+            window.location.href = "admin.html";
+        },
+
+        /* ---------- Carga de datos desde Supabase ---------- */
         async loadAllData() {
+            if (!this.supabaseReady) {
+                console.warn("[Oasis] Supabase no configurado");
+                return;
+            }
             try {
-                const [cursos, estudiantes, profesores, materias, niveles, horarios] = await Promise.all([
-                    loadSheet("cursos"),
-                    loadSheet("estudiantes"),
-                    loadSheet("profesores"),
-                    loadSheet("materias"),
-                    loadSheet("niveles"),
-                    loadSheet("horarios")
+                const [
+                    { data: cursos, error: e1 },
+                    { data: estudiantes, error: e2 },
+                    { data: profesores, error: e3 },
+                    { data: materias, error: e4 },
+                    { data: niveles, error: e5 },
+                    { data: horarios, error: e6 },
+                    { data: notas, error: e7 },
+                    { data: galeria, error: e8 }
+                ] = await Promise.all([
+                    supabaseClient.from("cursos").select("*").order("orden"),
+                    supabaseClient.from("estudiantes").select("*"),
+                    supabaseClient.from("profesores").select("*"),
+                    supabaseClient.from("materias").select("*").order("orden"),
+                    supabaseClient.from("materias_niveles").select("*"),
+                    supabaseClient.from("horarios").select("*").order("curso").order("hora"),
+                    supabaseClient.from("notas").select("*").order("orden"),
+                    supabaseClient.from("galeria_local").select("*").order("orden")
                 ]);
 
-                this.cursos = cursos.map(c => ({
+                const firstErr = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
+                if (firstErr) throw firstErr;
+
+                this.cursos = (cursos || []).map(c => ({
                     id: c.id,
                     nombre: c.nombre,
-                    disabled: (c.disabled || "").toLowerCase() === "true"
+                    disabled: !!c.disabled
                 }));
 
-                this.estudiantes = estudiantes.map(e => ({
-                    id: parseInt(e.id, 10),
-                    nombre: e.nombre,
-                    foto: e.foto,
-                    curso: e.curso,
-                    fechaNacimiento: e.fechaNacimiento,
-                    nivelIngles: e.nivelIngles,
-                    cargo: e.cargo
-                }));
-
-                this.profesores = profesores.map(p => ({
+                this.profesores = (profesores || []).map(p => ({
                     id: p.id,
                     nombre: p.nombre,
-                    foto: p.foto,
+                    foto: p.foto || "",
                     tutor: p.tutor || ""
                 }));
 
+                this.estudiantes = (estudiantes || []).map(e => ({
+                    id: e.id,
+                    nombre: e.nombre,
+                    foto: e.foto || "",
+                    curso: e.curso,
+                    fechaNacimiento: e.fecha_nacimiento || "",
+                    nivelIngles: e.nivel_ingles || "",
+                    cargo: e.cargo || "",
+                    isAdmin: !!e.is_admin
+                }));
+
                 const nivelesPorMateria = {};
-                niveles.forEach(n => {
-                    if (!n.materia_id) return;
+                (niveles || []).forEach(n => {
                     if (!nivelesPorMateria[n.materia_id]) nivelesPorMateria[n.materia_id] = [];
                     nivelesPorMateria[n.materia_id].push({
                         id: n.nivel_id,
                         nombre: n.nombre,
-                        profesor: n.profesor || ""
+                        profesor: n.profesor_id || ""
                     });
                 });
-                this.materias = materias.map(m => {
+                this.materias = (materias || []).map(m => {
                     const obj = { id: m.id, nombre: m.nombre };
                     if (nivelesPorMateria[m.id]) obj.niveles = nivelesPorMateria[m.id];
                     return obj;
                 });
 
+                /* Helper: "07:00 - 07:40" → 420 (minutos desde las 00:00) */
+                function horaAMinutos(horaStr) {
+                    if (!horaStr) return 99999;
+                    const m = String(horaStr).match(/(\d{1,2}):(\d{2})/);
+                    if (!m) return 99999;
+                    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+                }
+
                 const horariosMap = {};
-                horarios.forEach(h => {
+                (horarios || []).forEach(h => {
                     if (!horariosMap[h.curso]) horariosMap[h.curso] = [];
                     let row = horariosMap[h.curso].find(r => r.hora === h.hora);
                     if (!row) {
-                        row = { tipo: h.tipo, hora: h.hora };
+                        row = { tipo: h.tipo, hora: h.hora, _min: horaAMinutos(h.hora) };
                         if (h.tipo === "recreo") row.label = h.label || "Recreo";
                         horariosMap[h.curso].push(row);
                     }
-                    if (h.tipo === "clase" && h.dia && h.materia) {
-                        row[h.dia] = { materia: h.materia, profesor: h.profesor || "" };
+                    if (h.tipo === "clase" && h.dia && h.materia_id) {
+                        row[h.dia] = { materia: h.materia_id, profesor: h.profesor_id || "" };
                     }
                 });
+
+                /* Ordenar cada curso por hora */
+                for (const curso of Object.keys(horariosMap)) {
+                    horariosMap[curso].sort((a, b) => a._min - b._min);
+                }
+
                 this.horarios = horariosMap;
 
-                console.log(`[Oasis] Cargado: ${cursos.length} cursos, ${estudiantes.length} estudiantes, ${profesores.length} profesores, ${materias.length} materias, ${horarios.length} franjas`);
-            } catch (err) {
-                console.error("[Oasis] Error cargando datos desde Sheets:", err);
-            }
-        },
-
-        async loadNotasFromCSV() {
-            const urls = {
-                "2ITA": sheetUrl(SHEET_GIDS["2ITA"]),
-                "2CNB": sheetUrl(SHEET_GIDS["2CNB"]),
-                "2ITB": sheetUrl(SHEET_GIDS["2ITB"])
-            };
-            const combined = {};
-            for (const [courseId, url] of Object.entries(urls)) {
-                try {
-                    const res = await fetch(url);
-                    if (!res.ok) throw new Error("HTTP " + res.status);
-                    const text = await res.text();
-                    const lines = text.trim().split(/\r?\n/);
-                    if (lines.length < 3) continue;
-
-                    const sep = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
-                    const header = lines[0].split(sep).map(s => s.trim());
-
-                    const colToSubject = [];
-                    let currentSubject = null;
-                    for (let i = 0; i < header.length; i++) {
-                        const val = header[i];
-                        if (i >= 2 && val) currentSubject = val;
-                        colToSubject.push(currentSubject);
+                const notasMap = {};
+                (notas || []).forEach(n => {
+                    if (!notasMap[n.estudiante_id]) notasMap[n.estudiante_id] = {};
+                    if (!notasMap[n.estudiante_id][n.materia_id]) notasMap[n.estudiante_id][n.materia_id] = [];
+                    if (typeof n.valor === "number") {
+                        notasMap[n.estudiante_id][n.materia_id].push(n.valor);
                     }
+                });
+                this.notas = notasMap;
 
-                    const subjectCols = {};
-                    for (let i = 2; i < colToSubject.length; i++) {
-                        const subj = colToSubject[i];
-                        if (!subj) continue;
-                        if (!subjectCols[subj]) subjectCols[subj] = [];
-                        subjectCols[subj].push(i);
+                this.galeriaLocal = (galeria || []).map(g => ({
+                    curso: g.curso,
+                    ruta: g.ruta,
+                    orden: g.orden || 0
+                }));
+
+                /* Actualizar datos del usuario actual */
+                if (this.currentUser) {
+                    const me = this.getStudentById(this.currentUser.id);
+                    if (me) {
+                        this.currentUserIsAdmin = !!me.isAdmin;
                     }
-
-                    let count = 0;
-                    for (let r = 2; r < lines.length; r++) {
-                        const raw = lines[r];
-                        if (!raw.trim()) continue;
-                        const cols = raw.split(sep).map(s => s.trim());
-                        const id = cols[0];
-                        if (!id) continue;
-
-                        combined[id] = {};
-                        for (const [subj, indices] of Object.entries(subjectCols)) {
-                            combined[id][subj] = indices.map(i => {
-                                const v = parseFloat(cols[i]);
-                                return isNaN(v) ? null : v;
-                            });
-                        }
-                        count++;
-                    }
-                    console.log(`[Oasis] Notas ${courseId}: ${count} estudiantes`);
-                } catch (err) {
-                    console.warn(`[Oasis] Error cargando notas de ${courseId}:`, err);
                 }
+
+                console.log(`[Oasis] Cargado: ${this.cursos.length} cursos, ${this.estudiantes.length} estudiantes, ${this.profesores.length} profesores, ${this.materias.length} materias, ${(horarios || []).length} franjas, ${(notas || []).length} notas, ${this.galeriaLocal.length} fotos locales`);
+
+                this._dataLoaded = true;
+            } catch (err) {
+                console.error("[Oasis] Error cargando datos desde Supabase:", err);
             }
-            if (Object.keys(combined).length > 0) this.notas = combined;
         },
 
-        /* ========================================================
-           Cursos
-           ======================================================== */
+        /* ---------- Cursos ---------- */
         async selectCourse(id, opts = {}) {
             const { push = true } = opts;
             const course = this.cursos.find(c => c.id === id);
@@ -674,14 +603,9 @@ createApp({
             this.refreshAnnouncementsCount();
         },
 
-        /* ========================================================
-           Drawer
-           ======================================================== */
         closeDrawer() { this.drawerOpen = false; this.drawerUserMenuOpen = false; },
 
-        /* ========================================================
-           Login / sesión
-           ======================================================== */
+        /* ---------- Login (modal fallback) ---------- */
         openLogin() {
             this.closeDrawer();
             this.loginError = false;
@@ -699,19 +623,21 @@ createApp({
             });
             if (!match) { this.loginError = true; return; }
             this.currentUser = { id: match.id, nombre: shortName(match.nombre) };
+            this.currentUserIsAdmin = !!match.isAdmin;
             sessionStorage.setItem("oasis_session", JSON.stringify(this.currentUser));
             this.closeLoginModal();
         },
         signOut() {
             this.currentUser = null;
+            this.currentUserIsAdmin = false;
             sessionStorage.removeItem("oasis_session");
             this.drawerUserMenuOpen = false;
-            if (this.materiaOpen) this.materiaArchivos = this.materiaArchivos; // no-op
+            if (typeof window.__oasisShowLogin === "function") {
+                window.__oasisShowLogin();
+            }
         },
 
-        /* ========================================================
-           Imagen ampliada
-           ======================================================== */
+        /* ---------- Image viewer ---------- */
         openImageViewer(src) {
             if (!src) return;
             this.imageViewerSrc = src;
@@ -719,9 +645,7 @@ createApp({
         },
         closeImageViewer() { this.imageViewerOpen = false; },
 
-        /* ========================================================
-           Materia: niveles + archivos
-           ======================================================== */
+        /* ---------- Materia ---------- */
         async openMateriaModal(materiaId, profesorId) {
             const materia = this.findMateria(materiaId);
             this.materiaBaseId = materiaId;
@@ -768,7 +692,6 @@ createApp({
             this.materiaArchivos = [];
             if (!this.supabaseReady) {
                 this.materiaArchivosLoading = false;
-                this.materiaArchivos = [{ id: "_err", nombre: "Supabase is not configured.", storage_path: "" }];
                 return;
             }
             try {
@@ -791,9 +714,8 @@ createApp({
         },
         canDeleteFile(f) {
             if (!this.currentUser) return false;
-            return this.currentUser.id === f.subido_por_id;
+            return this.currentUserIsAdmin || this.currentUser.id === f.subido_por_id;
         },
-
         async deleteFile(f) {
             if (!confirm(`Delete "${f.nombre}"?`)) return;
             try {
@@ -807,13 +729,12 @@ createApp({
             }
         },
 
-        onMateriaFiles(e) { this.uploadFiles(e.target.files, "materia"); },
+        onMateriaFiles(e) { this.uploadFiles(e.target.files); },
         onMateriaDrop(e) {
             this.dropMateriaDragging = false;
-            if (e.dataTransfer.files.length) this.uploadFiles(e.dataTransfer.files, "materia");
+            if (e.dataTransfer.files.length) this.uploadFiles(e.dataTransfer.files);
         },
-
-        async uploadFiles(files, kind) {
+        async uploadFiles(files) {
             if (!this.canUploadMateria || !this.materiaFullId) return;
             const tooBig = Array.from(files).filter(f => f.size > MAX_FILE_SIZE);
             if (tooBig.length > 0) { alert(`"${tooBig[0].name}" is too large (max 50 MB).`); return; }
@@ -845,9 +766,7 @@ createApp({
             }
         },
 
-        /* ========================================================
-           Galería
-           ======================================================== */
+        /* ---------- Galería ---------- */
         async loadGallery() {
             this.galeriaExtra = [];
             if (!this.supabaseReady || !this.currentCourse) return;
@@ -899,9 +818,11 @@ createApp({
             }
         },
 
-        /* ========================================================
-           Galería auto-scroll (móvil)
-           ======================================================== */
+        onGalleryImgError(e) {
+            e.target.style.opacity = "0.15";
+        },
+
+        /* ---------- Auto-scroll galería ---------- */
         isMobileGallery() { return window.matchMedia("(max-width:700px)").matches; },
         setupGalleryAutoScroll() {
             if (!this._galeriaListeners) {
@@ -933,14 +854,11 @@ createApp({
             this._galeriaResume = setTimeout(() => this.startGalleryAuto(), 2200);
         },
 
-        /* ========================================================
-           Students
-           ======================================================== */
+        /* ---------- Students ---------- */
         scrollStudents(delta) {
             const track = this.$refs.studentsTrack;
             if (track) track.scrollBy({ left: delta, behavior: "smooth" });
         },
-
         openStudentModal(s) {
             this.studentSelected = s;
             this.studentContrib = "...";
@@ -970,7 +888,6 @@ createApp({
             if (!this.radarSvgHtml) return;
             this.radarOpen = !this.radarOpen;
         },
-
         getStudentSubjects(studentId) {
             const student = this.getStudentById(studentId);
             if (!student) return [];
@@ -997,7 +914,6 @@ createApp({
             }
             return Object.keys(out).length ? out : null;
         },
-
         buildRadarSvg(subjects, values, showData) {
             const size = 280, max = 10, danger = 7;
             const n = subjects.length;
@@ -1010,7 +926,6 @@ createApp({
                 const a = angle(i);
                 return [cx + Math.cos(a) * r * ratio, cy + Math.sin(a) * r * ratio];
             };
-
             let out = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" role="img">`;
             [0.25, 0.5, 0.75, 1].forEach(ratio => {
                 const pts = subjects.map((_, i) => point(i, ratio).join(",")).join(" ");
@@ -1044,9 +959,7 @@ createApp({
             return out;
         },
 
-        /* ========================================================
-           Announcements
-           ======================================================== */
+        /* ---------- Announcements ---------- */
         openAnnouncementsModal() {
             this.announcementsOpen = true;
             this.loadAnnouncements();
@@ -1068,37 +981,26 @@ createApp({
         },
         renderAnnouncementMessage(text) {
             if (!text) return "";
-        
-            // 1. Reemplazamos {subjectId} por un placeholder raro que marked no toca
             const withPlaceholders = text.replace(/\{([a-zA-Z0-9_\-]+)\}/g, (match, id) => {
                 const m = this.findMateria(id);
                 if (!m) return match;
                 return `%%MENTION_${id}%%`;
             });
-        
-            // 2. Markdown → HTML (si falla marked, cae al escape clásico)
             let html;
             try {
                 html = window.marked ? window.marked.parse(withPlaceholders) : escapeHtml(withPlaceholders);
             } catch (err) {
-                console.warn("[Oasis] Markdown falló, usando texto plano:", err);
+                console.warn("[Oasis] Markdown falló:", err);
                 html = escapeHtml(withPlaceholders);
             }
-        
-            // 3. Sanitizamos (evita <script>, onclick, etc.)
             if (window.DOMPurify) {
-                html = window.DOMPurify.sanitize(html, {
-                    ADD_ATTR: ["target", "rel", "data-materia"]
-                });
+                html = window.DOMPurify.sanitize(html, { ADD_ATTR: ["target", "rel", "data-materia"] });
             }
-        
-            // 4. Ahora sí, convertimos los placeholders en chips de mención
             html = html.replace(/%%MENTION_([a-zA-Z0-9_\-]+)%%/g, (match, id) => {
                 const m = this.findMateria(id);
                 if (!m) return match;
                 return `<span class="msg-mention" data-materia="${id}">${escapeHtml(m.nombre)}</span>`;
             });
-        
             return html;
         },
         onMsgBodyClick(e) {
@@ -1113,11 +1015,7 @@ createApp({
         async loadAnnouncements() {
             this.announcementsLoading = true;
             this.announcements = [];
-            if (!this.supabaseReady) {
-                this.announcementsLoading = false;
-                return;
-            }
-            if (!this.currentCourse) {
+            if (!this.supabaseReady || !this.currentCourse) {
                 this.announcementsLoading = false;
                 return;
             }
@@ -1199,15 +1097,12 @@ createApp({
                 this.refreshAnnouncementsCount();
             } catch (err) {
                 console.error(err);
-                alert("Couldn't save the announcement. Check the console (F12).");
+                alert("Couldn't save the announcement.");
             } finally {
                 this.announcementsSending = false;
             }
         },
 
-        /* ========================================================
-           Keydown global (Esc)
-           ======================================================== */
         onKeydown(e) {
             if (e.key !== "Escape") return;
             if (this.imageViewerOpen) this.closeImageViewer();
@@ -1223,18 +1118,10 @@ createApp({
             }
         },
 
-        /* ========================================================
-           Boot
-           ======================================================== */
-        async init() {
-            /* Restaurar sesión */
-            const saved = sessionStorage.getItem("oasis_session");
-            if (saved) {
-                try { this.currentUser = JSON.parse(saved); } catch {}
+        async afterLogin() {
+            if (!this._dataLoaded) {
+                await this.loadAllData();
             }
-
-            await Promise.all([this.loadAllData(), this.loadNotasFromCSV()]);
-
             const available = this.cursosDisponibles;
             if (available.length === 0) return;
 
@@ -1246,6 +1133,30 @@ createApp({
                 available[0];
 
             await this.selectCourse(chosen.id, { push: false });
+        },
+
+        async init() {
+            /* Ver si hay sesión guardada */
+            const saved = sessionStorage.getItem("oasis_session");
+            if (saved) {
+                try {
+                    this.currentUser = JSON.parse(saved);
+                    await this.loadAllData();
+                    const me = this.getStudentById(this.currentUser.id);
+                    if (me) this.currentUserIsAdmin = !!me.isAdmin;
+                } catch (e) {
+                    console.warn("[Oasis] Sesión inválida:", e);
+                    sessionStorage.removeItem("oasis_session");
+                    this.currentUser = null;
+                }
+            }
+
+            if (this.currentUser) {
+                window.__oasisHideLogin();
+                await this.afterLogin();
+            } else {
+                window.__oasisShowLogin();
+            }
         }
     },
 
@@ -1257,11 +1168,43 @@ createApp({
             const id = location.hash.replace("#", "");
             if (id && id !== this.currentCourse) this.selectCourse(id, { push: false });
         });
+
         this.init();
+
+        /* Botón de login screen: primero carga data si hace falta */
+        loginSubmitBtn.addEventListener("click", async () => {
+            if (!this._dataLoaded) await this.loadAllData();
+
+            const u = normalize(loginUserInput.value);
+            const p = normalize(loginPassInput.value);
+            const match = this.estudiantes.find(e => {
+                const c = loginCredentials(e);
+                return c.username === u && c.password === p;
+            });
+            if (!match) {
+                loginErrorMsg.style.display = "block";
+                return;
+            }
+            this.currentUser = { id: match.id, nombre: shortName(match.nombre) };
+            this.currentUserIsAdmin = !!match.isAdmin;
+            sessionStorage.setItem("oasis_session", JSON.stringify(this.currentUser));
+            loginErrorMsg.style.display = "none";
+            window.__oasisHideLogin();
+            await this.afterLogin();
+        });
+
+        loginPassInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") loginSubmitBtn.click();
+        });
+        loginUserInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") loginPassInput.focus();
+        });
     },
 
     beforeUnmount() {
         document.removeEventListener("keydown", this.onKeydown);
         document.removeEventListener("click", this.onDocClick);
     }
-}).mount("#app");
+});
+
+app.mount("#app");

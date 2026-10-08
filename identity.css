@@ -1,0 +1,139 @@
+/* ============================================================
+   IDENTITY SYSTEM · v1.0
+   Paleta, radios, sombras y animaciones compartidas
+   entre todos los proyectos.
+   ============================================================ */
+
+:root {
+    /* ── FONDOS (de más oscuro a más elevado) ── */
+    --bg-0: #000000;   /* fondo absoluto / pantalla completa */
+    --bg-1: #0A0A0E;   /* fondo principal */
+    --bg-2: #101015;   /* superficie base */
+    --bg-3: #16161C;   /* tarjeta elevada 1 */
+    --bg-4: #1E1E26;   /* tarjeta elevada 2 */
+    --bg-5: #282833;   /* hover / pressed */
+
+    /* ── TEXTO ── */
+    --tx-1: #FFFFFF;   /* principal puro */
+    --tx-2: #ECECF2;   /* principal suave */
+    --tx-3: #9C9CAA;   /* secundario */
+    --tx-4: #64647A;   /* muted / labels */
+    --tx-5: #42424F;   /* disabled */
+
+    /* ── ACENTO · LAVANDA ── */
+    --ac-1: #D6CCFF;   /* hover / luz */
+    --ac-2: #C6B8FF;   /* principal */
+    --ac-3: #B0A0F0;   /* pressed */
+    --ac-4: #8E7DD4;   /* profundo */
+    --ac-text: #131318; /* texto sobre acento */
+
+    /* ── ESTADOS ── */
+    --st-success: #8FE3A8;
+    --st-warning: #FFD77A;
+    --st-danger:  #FF8A95;
+    --st-info:    #8AC7FF;
+
+    /* ── LÍNEAS / OUTLINES ── */
+    --ln-1: rgba(255,255,255,0.07);
+    --ln-2: rgba(255,255,255,0.13);
+    --ln-3: rgba(255,255,255,0.20);
+    --ln-ac: rgba(198,184,255,0.35);
+
+    /* ── RADIOS ── */
+    --r-xs: 10px;
+    --r-sm: 14px;
+    --r-md: 18px;
+    --r-lg: 24px;
+    --r-xl: 32px;
+    --r-full: 999px;
+
+    /* ── SOMBRAS ── */
+    --sh-sm: 0 2px 8px rgba(0,0,0,0.25);
+    --sh-md: 0 8px 24px rgba(0,0,0,0.35);
+    --sh-lg: 0 20px 60px rgba(0,0,0,0.50);
+    --sh-glow: 0 0 40px rgba(198,184,255,0.15);
+
+    /* ── TIMING ── */
+    --t-fast: 0.15s;
+    --t-base: 0.25s;
+    --t-slow: 0.40s;
+    --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in:     cubic-bezier(0.40, 0, 0.20, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ══════════════════════════════════════════════════════════
+   ANIMACIONES UNIVERSALES
+   ══════════════════════════════════════════════════════════ */
+
+/* Entrada suave */
+@keyframes id-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Deslizar hacia arriba */
+@keyframes id-slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Escala + fade (modales) */
+@keyframes id-scale-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* Flotación sutil (logos/íconos) */
+@keyframes id-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+/* Latido (estados activos) */
+@keyframes id-pulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%      { opacity: 0.6; transform: scale(1.02); }
+}
+
+/* Giro (spinners) */
+@keyframes id-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Rebote (iconos de drop) */
+@keyframes id-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+}
+
+/* Parpadeo */
+@keyframes id-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+}
+
+/* Shimmer (skeletons) */
+@keyframes id-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BASE TIPOGRÁFICA
+   ══════════════════════════════════════════════════════════ */
+
+html, body {
+    font-family: 'Varela Round', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Pesos disponibles de Varela Round:
+   Solo tiene 400 (regular). Para jerarquía visual
+   se usan TAMAÑOS + ESPACIADO + COLOR, no pesos.
+   Regla de la casa:
+   - Títulos grandes → letter-spacing: 0.5px – 1.5px
+   - Texto cuerpo     → letter-spacing: 0
+   - Labels pequeños → letter-spacing: 1.5px + text-transform: uppercase
+*/
