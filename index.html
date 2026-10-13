@@ -36,8 +36,22 @@
 
             <div class="login-field">
                 <label class="login-field-label" for="loginPassInput">PASSWORD</label>
-                <input type="password" id="loginPassInput" class="login-field-input"
-                       placeholder="••••••" autocomplete="current-password">
+                <div class="login-field-password">
+                    <input type="password" id="loginPassInput" class="login-field-input"
+                        placeholder="••••••" autocomplete="current-password">
+                    <button type="button" class="login-field-eye" data-target="loginPassInput" aria-label="Show password">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3l18 18"/>
+                            <path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.4 4.3"/>
+                            <path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 4.4-1"/>
+                            <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <p class="login-error-msg" id="loginErrorMsg" style="display:none;">
@@ -101,14 +115,51 @@
 
     <!-- Página principal -->
     <main class="course-page">
-        <div class="fs-topbar">
-            <button class="fs-menu" @click="drawerOpen = true" aria-label="Course menu">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 6h16M4 12h16M4 18h16"/>
+    <div class="fs-topbar">
+        <button class="fs-menu" @click="drawerOpen = true" aria-label="Course menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+        <span class="fs-topbar-title">{{ currentCourseObj ? currentCourseObj.nombre : 'Loading…' }}</span>
+
+        <!-- SECTION SWITCHER -->
+        <div class="fs-section-switcher" :class="{ open: sectionSwitcherOpen }">
+            <button class="fs-section-btn" type="button" @click.stop="sectionSwitcherOpen = !sectionSwitcherOpen">
+                <span>Courses</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m6 9 6 6 6-6"/>
                 </svg>
             </button>
-            <span class="fs-topbar-title">{{ currentCourseObj ? currentCourseObj.nombre : 'Loading…' }}</span>
+
+            <div class="fs-section-menu">
+                <button class="fs-section-item active" type="button" @click="sectionSwitcherOpen = false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v18H5.5A1.5 1.5 0 0 1 4 19.5z"/>
+                        <path d="M4 17.5A1.5 1.5 0 0 1 5.5 16H20"/>
+                    </svg>
+                    <span>Courses</span>
+                </button>
+
+                <a class="fs-section-item" href="secrets.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4.5" y="10.5" width="15" height="10" rx="2"/>
+                        <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+                    </svg>
+                    <span>Secrets</span>
+                </a>
+
+                <button class="fs-section-item disabled" type="button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 8h14l-1.2 12H6.2z"/>
+                        <path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
+                    </svg>
+                    <span>Store</span>
+                    <span class="fs-section-badge">Soon</span>
+                </button>
+            </div>
         </div>
+    </div>
 
         <div class="fs-body">
 
@@ -220,18 +271,14 @@
             <!-- Gallery -->
             <section class="fs-section">
                 <div class="fs-section-header"><h2>Gallery</h2><div class="divider-pill"></div></div>
-                <div class="galeria-viewport" ref="galeriaViewport"
-                     @touchstart.passive="pauseGalleryTemporarily"
-                     @touchend.passive="pauseGalleryTemporarily">
-                    <div class="galeria-track" ref="galeriaTrack" :style="galeriaTrackStyle">
-                        <p v-if="galeriaAll.length === 0" class="galeria-empty">No photos in the gallery yet</p>
-                        <div v-for="(item, i) in galeriaDoubled" :key="i"
-                             class="galeria-item"
-                             :class="'size-' + ['a','b','c'][i % 3]">
-                             <img :src="item.ruta" alt=""
-                             style="cursor: zoom-in"
-                             @error="onGalleryImgError"
-                             @click="openImageViewer(item.ruta)">
+                <div class="galeria-viewport" ref="galeriaViewport">
+                    <p v-if="galeriaAll.length === 0" class="galeria-empty">No photos</p>
+                    <div v-else class="galeria-track" ref="galeriaTrack" :style="galeriaTrackStyle">
+                        <div v-for="(item, i) in galeriaDoubled" :key="i" class="galeria-item">
+                            <img :src="item.ruta" alt=""
+                                style="cursor: zoom-in"
+                                @error="onGalleryImgError"
+                                @click="openImageViewer(item.ruta)">
                         </div>
                     </div>
                 </div>
@@ -445,6 +492,20 @@
 
 </div>
 
-<script src="app.js?v=3"></script>
+<script>
+/* Password visibility toggle (fuera de Vue) */
+document.querySelectorAll('.login-field-eye').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.classList.toggle('is-visible', show);
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+});
+</script>
+
+<script src="app.js?v=5"></script>
 </body>
 </html>

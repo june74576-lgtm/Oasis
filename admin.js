@@ -120,16 +120,19 @@ const app = createApp({
             return this.cursos.filter(c => this.canEditThisCourse(c.id));
         },
         estudiantesFiltrados() {
+            let lista;
             if (this.isAdmin) {
-                if (this.selectedCourse) {
-                    return this.estudiantes.filter(e => e.curso === this.selectedCourse);
-                }
-                return this.estudiantes;
+                lista = this.selectedCourse
+                    ? this.estudiantes.filter(e => e.curso === this.selectedCourse)
+                    : this.estudiantes.slice();
+            } else {
+                const me = this.estudiantes.find(e => e.id === this.currentUser.id);
+                if (!me) return [];
+                lista = this.estudiantes.filter(e => e.curso === me.curso);
             }
-            // Con cargo: solo su curso
-            const me = this.estudiantes.find(e => e.id === this.currentUser.id);
-            if (!me) return [];
-            return this.estudiantes.filter(e => e.curso === me.curso);
+            return lista.slice().sort((a, b) =>
+                firstLastName(a.nombre).localeCompare(firstLastName(b.nombre), "es", { sensitivity: "base" })
+            );
         },
         horariosDelCurso() {
             if (!this.selectedCourse) return [];
@@ -169,14 +172,28 @@ const app = createApp({
     },
     },
 
+    watch: {
+        currentSection() {
+            // Cerrar el sidebar mobile siempre que cambie de sección
+            this.mobileSidebarOpen = false;
+        }
+    },
+
     methods: {
 
+        mediaUrl(pathOrUrl) {
+            if (!pathOrUrl) return "";
+            if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+            if (!this.supabaseReady) return "";
+            const { data } = supabaseClient.storage.from("media").getPublicUrl(pathOrUrl);
+            return data.publicUrl;
+        },
         horaAMinutos(horaStr) {
-        if (!horaStr) return 99999;
-        const m = String(horaStr).match(/(\d{1,2}):(\d{2})/);
-        if (!m) return 99999;
-        return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-    },
+            if (!horaStr) return 99999;
+            const m = String(horaStr).match(/(\d{1,2}):(\d{2})/);
+            if (!m) return 99999;
+            return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+        },
 
     /* ---------- Editor de celda ---------- */
     onCellClick(franja, day) {
@@ -382,7 +399,7 @@ const app = createApp({
                 this.estudiantes = (estudiantes || []).map(e => ({
                     id: e.id,
                     nombre: e.nombre,
-                    foto: e.foto || "",
+                    foto: this.mediaUrl(e.foto),
                     curso: e.curso,
                     fechaNacimiento: e.fecha_nacimiento || "",
                     nivelIngles: e.nivel_ingles || "",
@@ -392,7 +409,7 @@ const app = createApp({
                 this.profesores = (profesores || []).map(p => ({
                     id: p.id,
                     nombre: p.nombre,
-                    foto: p.foto || "",
+                    foto: this.mediaUrl(p.foto),
                     tutor: p.tutor || ""
                 }));
                 this.materias = (materias || []).map(m => ({
@@ -420,7 +437,6 @@ const app = createApp({
             this.mobileSidebarOpen = false;
             if (section === "students" || section === "schedules" || section === "gallery") {
                 if (!this.selectedCourse && this.cursosDisponibles.length > 0) {
-                    // Preseleccionar el curso del usuario si no es admin
                     if (!this.isAdmin && this.currentUser) {
                         const me = this.estudiantes.find(e => e.id === this.currentUser.id);
                         if (me) { this.selectedCourse = me.curso; return; }
@@ -478,9 +494,9 @@ const app = createApp({
                     .update({ foto: path }).eq("id", s.id);
                 if (updErr) throw updErr;
 
-                // Regenerar URL pública
                 const { data } = supabaseClient.storage.from("media").getPublicUrl(path);
-                s.foto = data.publicUrl;
+                p._fotoFailed = false;
+                p.foto = data.publicUrl;
                 this.showSnackbar("Photo updated");
             } catch (err) {
                 console.error(err);
@@ -516,8 +532,8 @@ const app = createApp({
                 if (updErr) throw updErr;
 
                 const { data } = supabaseClient.storage.from("media").getPublicUrl(path);
+                p._fotoFailed = false;
                 p.foto = data.publicUrl;
-                this.showSnackbar("Photo updated");
             } catch (err) {
                 console.error(err);
                 this.showSnackbar("Error uploading photo", "error");

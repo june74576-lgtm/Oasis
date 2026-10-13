@@ -38,6 +38,12 @@ function firstLastName(full) {
     const lastCount = parts.length >= 3 ? 2 : 1;
     return parts[parts.length - lastCount] || "";
 }
+function firstLastName(full) {
+    const parts = full.trim().split(/\s+/);
+    if (parts.length <= 1) return parts[0] || "";
+    const lastCount = parts.length >= 3 ? 2 : 1;
+    return parts[parts.length - lastCount] || "";
+}
 function loginCredentials(student) {
     const parts = student.nombre.trim().split(/\s+/);
     const lastCount = parts.length >= 3 ? 2 : (parts.length === 2 ? 1 : 0);
@@ -144,6 +150,10 @@ const app = createApp({
 
             drawerOpen: false,
             drawerUserMenuOpen: false,
+
+            drawerOpen: false,
+            drawerUserMenuOpen: false,
+            sectionSwitcherOpen: false,
 
             currentUser: null,
             currentUserIsAdmin: false,
@@ -284,7 +294,12 @@ const app = createApp({
 
         studentsList() {
             if (!this.currentCourse) return [];
-            return this.estudiantes.filter(e => e.curso === this.currentCourse);
+            return this.estudiantes
+                .filter(e => e.curso === this.currentCourse)
+                .slice()
+                .sort((a, b) =>
+                    firstLastName(a.nombre).localeCompare(firstLastName(b.nombre), "es", { sensitivity: "base" })
+                );
         },
 
         galeriaLocalCurso() {
@@ -446,6 +461,16 @@ const app = createApp({
             return student.nivelIngles.toLowerCase().startsWith("advanced") ? "advanced" : "intermedio";
         },
 
+        mediaUrl(pathOrUrl) {
+            if (!pathOrUrl) return "";
+            // Si ya es una URL completa (http/https), la devolvemos tal cual.
+            if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+            // Si es un path relativo, lo resolvemos contra el bucket "media".
+            if (!this.supabaseReady) return "";
+            const { data } = supabaseClient.storage.from("media").getPublicUrl(pathOrUrl);
+            return data.publicUrl;
+        },
+
         /* ---------- Admin ---------- */
         goToAdmin() {
             window.location.href = "admin.html";
@@ -490,14 +515,14 @@ const app = createApp({
                 this.profesores = (profesores || []).map(p => ({
                     id: p.id,
                     nombre: p.nombre,
-                    foto: p.foto || "",
+                    foto: this.mediaUrl(p.foto),
                     tutor: p.tutor || ""
                 }));
 
                 this.estudiantes = (estudiantes || []).map(e => ({
                     id: e.id,
                     nombre: e.nombre,
-                    foto: e.foto || "",
+                    foto: this.mediaUrl(e.foto),
                     curso: e.curso,
                     fechaNacimiento: e.fecha_nacimiento || "",
                     nivelIngles: e.nivel_ingles || "",
@@ -561,7 +586,7 @@ const app = createApp({
 
                 this.galeriaLocal = (galeria || []).map(g => ({
                     curso: g.curso,
-                    ruta: g.ruta,
+                    ruta: this.mediaUrl(g.ruta),
                     orden: g.orden || 0
                 }));
 
@@ -1105,6 +1130,7 @@ const app = createApp({
 
         onKeydown(e) {
             if (e.key !== "Escape") return;
+            if (this.sectionSwitcherOpen) { this.sectionSwitcherOpen = false; return; }
             if (this.imageViewerOpen) this.closeImageViewer();
             else if (this.drawerOpen) this.closeDrawer();
             else if (this.materiaOpen) this.closeMateriaModal();
@@ -1116,6 +1142,9 @@ const app = createApp({
             if (this.drawerUserMenuOpen && !e.target.closest(".drawer-user")) {
                 this.drawerUserMenuOpen = false;
             }
+            if (this.sectionSwitcherOpen && !e.target.closest(".fs-section-switcher")) {
+                this.sectionSwitcherOpen = false;
+            }
         },
 
         async afterLogin() {
@@ -1125,6 +1154,19 @@ const app = createApp({
             const available = this.cursosDisponibles;
             if (available.length === 0) return;
 
+            /* 1. Prioridad: el curso propio del estudiante logueado */
+            if (this.currentUser) {
+                const me = this.getStudentById(this.currentUser.id);
+                if (me && me.curso) {
+                    const ownCourse = available.find(c => c.id === me.curso);
+                    if (ownCourse) {
+                        await this.selectCourse(ownCourse.id, { push: false });
+                        return;
+                    }
+                }
+            }
+
+            /* 2. Fallback: hash en URL / último curso visto / primero disponible */
             const hashId = location.hash.replace("#", "");
             const lastId = sessionStorage.getItem("oasis_last_course");
             const chosen =
