@@ -72,7 +72,12 @@ createApp({
             sending: false,
             texto: "",
             anonimo: false,
-            ANON_AVATAR
+            ANON_AVATAR,
+            userMenuOpen: false,
+            profileOpen: false,
+            profileStudent: null,
+            profileSocials: { instagram: "", tiktok: "", whatsapp: "", spotify: "" },
+            sectionSwitcherOpen: false,
         };
     },
     computed: {
@@ -88,7 +93,34 @@ createApp({
         },
         currentUserInitial() {
             return (this.currentUser && this.currentUser.nombre ? this.currentUser.nombre[0] : "?").toUpperCase();
-        }
+        },
+        canAccessAdmin() {
+            const OWNER_ID = 11; // mismo valor que en app.js
+            return !!(this.currentUser && this.currentUser.id === OWNER_ID);
+        },
+        messagesWithSeparators() {
+            const out = [];
+            let lastDay = null;
+            const fmt = new Intl.DateTimeFormat("en-US", {
+                weekday: "long", day: "numeric", month: "long", year: "numeric"
+            });
+            this.messages.forEach((m, idx) => {
+                const d = new Date(m.fecha);
+                const dayKey = d.toDateString();
+                if (dayKey !== lastDay) {
+                    out.push({ type: "separator", key: "sep-" + dayKey, label: fmt.format(d) });
+                    lastDay = dayKey;
+                }
+                out.push({ type: "message", key: "msg-" + m.id, data: m });
+            });
+            return out;
+        },
+
+        hasStore() {
+            if (!this.currentUser) return false;
+            const me = this.estudiantes.find(e => e.id === this.currentUser.id);
+            return !!(me && me.has_store);
+        },
     },
     methods: {
 
@@ -141,7 +173,8 @@ createApp({
                 this.estudiantes = est.data.map(e => ({
                     id: e.id,
                     nombre: e.nombre,
-                    foto: this.mediaUrl(e.foto)
+                    foto: this.mediaUrl(e.foto),
+                    has_store: !!e.has_store
                 }));
             }
             if (msgs.data) {
@@ -180,25 +213,52 @@ createApp({
         },
         signOut() {
             sessionStorage.removeItem("oasis_session");
+            localStorage.removeItem("oasis_session");
             window.location.href = "index.html";
         },
         async init() {
             if (!this.supabaseReady) { this.loading = false; return; }
 
-            const saved = sessionStorage.getItem("oasis_session");
+            const saved = sessionStorage.getItem("oasis_session") || localStorage.getItem("oasis_session");
             if (!saved) { window.__secretsShowLogin(); return; }
             try { this.currentUser = JSON.parse(saved); }
             catch { window.__secretsShowLogin(); return; }
 
             await this.loadData();
             window.__secretsHideLogin();
-        }
+        },
+        goToAdmin() { window.location.href = "admin.html"; },
+        openProfile() {
+            this.profileStudent = this.estudiantes.find(e => e.id === this.currentUser.id) || null;
+            this.profileOpen = true;
+            try {
+                const raw = localStorage.getItem("oasis_socials_" + this.currentUser.id);
+                if (raw) this.profileSocials = { ...this.profileSocials, ...JSON.parse(raw) };
+            } catch {}
+        },
+        closeProfile() { this.profileOpen = false; this.profileStudent = null; },
+        saveProfile() {
+            if (!this.currentUser) return;
+            localStorage.setItem("oasis_socials_" + this.currentUser.id, JSON.stringify(this.profileSocials));
+            this.closeProfile();
+        },
+        toggleSwitcher() {
+            this.sectionSwitcherOpen = !this.sectionSwitcherOpen;
+            this.userMenuOpen = false;
+        },
+        toggleUserMenu() {
+            this.userMenuOpen = !this.userMenuOpen;
+            this.sectionSwitcherOpen = false;
+        },
+        goToMyStore() { window.location.href = "my-store.html"; },
     },
     mounted() {
         this.init();
 
         loginSubmitBtn.addEventListener("click", async () => {
-            await this.loadData();
+            if (!this.supabaseReady) { this.loading = false; return; }
+            if (this.estudiantes.length === 0) await this.loadData();
+
             const u = normalize(loginUserInput.value);
             const p = normalize(loginPassInput.value);
             const match = this.estudiantes.find(e => {
@@ -209,13 +269,33 @@ createApp({
                 loginErrorMsg.style.display = "block";
                 return;
             }
+
             this.currentUser = { id: match.id, nombre: shortName(match.nombre) };
-            sessionStorage.setItem("oasis_session", JSON.stringify(this.currentUser));
+
+            const remember = document.getElementById("loginRemember");
+            const payload = JSON.stringify(this.currentUser);
+            if (remember && remember.checked) {
+                localStorage.setItem("oasis_session", payload);
+                sessionStorage.removeItem("oasis_session");
+            } else {
+                sessionStorage.setItem("oasis_session", payload);
+                localStorage.removeItem("oasis_session");
+            }
+
             loginErrorMsg.style.display = "none";
             window.__secretsHideLogin();
         });
+
         loginPassInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") loginSubmitBtn.click();
+        });
+        document.addEventListener("click", (e) => {
+            if (this.sectionSwitcherOpen && !e.target.closest(".fs-section-switcher")) {
+                this.sectionSwitcherOpen = false;
+            }
+            if (this.userMenuOpen && !e.target.closest(".secrets-user")) {
+                this.userMenuOpen = false;
+            }
         });
     }
 }).mount("#secretsApp");

@@ -7,12 +7,12 @@ const { createApp } = Vue;
 /* ============================================================
    Login screen (fuera de Vue)
    ============================================================ */
-const loginScreen   = document.getElementById("loginScreen");
+const loginScreen    = document.getElementById("loginScreen");
 const loginUserInput = document.getElementById("loginUserInput");
 const loginPassInput = document.getElementById("loginPassInput");
-const loginErrorMsg = document.getElementById("loginErrorMsg");
+const loginErrorMsg  = document.getElementById("loginErrorMsg");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
-const adminRoot     = document.getElementById("adminApp");
+const adminRoot      = document.getElementById("adminApp");
 
 window.__adminShowLogin = function () {
     adminRoot.classList.add("hidden-app");
@@ -28,7 +28,7 @@ window.__adminHideLogin = function () {
 };
 
 /* ============================================================
-   Utilidades (compartidas conceptualmente con app.js)
+   Utilidades
    ============================================================ */
 function normalize(str) {
     return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -38,6 +38,12 @@ function shortName(full) {
     if (parts.length === 0) return "";
     const lastCount = parts.length >= 3 ? 2 : 1;
     return parts[0] + " " + (parts[parts.length - lastCount] || parts[parts.length - 1] || "");
+}
+function firstLastName(full) {                       // ← BUG FIX
+    const parts = String(full || "").trim().split(/\s+/);
+    if (parts.length <= 1) return parts[0] || "";
+    const lastCount = parts.length >= 3 ? 2 : 1;
+    return parts[parts.length - lastCount] || "";
 }
 function loginCredentials(student) {
     const parts = student.nombre.trim().split(/\s+/);
@@ -69,19 +75,20 @@ const app = createApp({
             horarios: [],
             galeriaLocal: [],
 
+            /* Constantes */
             days: ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"],
             dayLabels: { Lunes: "Monday", Martes: "Tuesday", Miercoles: "Wednesday", Jueves: "Thursday", Viernes: "Friday" },
+
             cellEditor: {
-                open: false,
-                franja: null,
-                day: null,
-                materia: "",
-                profesor: ""
+                open: false, franja: null, day: null, materia: "", profesor: ""
             },
+
             /* UI */
             currentSection: "courses",
             selectedCourse: null,
-            mobileSidebarOpen: false,
+            drawerOpen: false,
+            sectionSwitcherOpen: false,
+
             sidebarItems: [
                 { id: "courses",   label: "Courses",   icon: "school" },
                 { id: "students",  label: "Students",  icon: "group" },
@@ -104,6 +111,8 @@ const app = createApp({
         },
         isAdmin() { return this.currentUserIsAdmin; },
         cursosDisponibles() { return this.cursos.filter(c => !c.disabled); },
+        currentCourseObj() { return this.cursos.find(c => c.id === this.selectedCourse) || null; },
+
         currentUserPhoto() {
             if (!this.currentUser) return "";
             const me = this.estudiantes.find(e => e.id === this.currentUser.id);
@@ -112,13 +121,7 @@ const app = createApp({
         currentUserInitial() {
             return (this.currentUser && this.currentUser.nombre ? this.currentUser.nombre[0] : "?").toUpperCase();
         },
-        showCoursePicker() {
-            return ["students", "schedules", "gallery"].includes(this.currentSection);
-        },
-        cursosEditable() {
-            if (this.isAdmin) return this.cursos;
-            return this.cursos.filter(c => this.canEditThisCourse(c.id));
-        },
+
         estudiantesFiltrados() {
             let lista;
             if (this.isAdmin) {
@@ -134,53 +137,39 @@ const app = createApp({
                 firstLastName(a.nombre).localeCompare(firstLastName(b.nombre), "es", { sensitivity: "base" })
             );
         },
-        horariosDelCurso() {
-            if (!this.selectedCourse) return [];
-            return this.horarios.filter(h => h.curso === this.selectedCourse);
-        },
         galeriaDelCurso() {
-            if (!this.selectedCourse) return [];
+            if (!this.selectedCourse) return this.galeriaLocal;
             return this.galeriaLocal.filter(g => g.curso === this.selectedCourse);
         },
         franjasDelCurso() {
-        if (!this.selectedCourse) return [];
-        const filas = this.horarios.filter(h => h.curso === this.selectedCourse);
-        // Agrupar por hora
-        const map = {};
-        filas.forEach(h => {
-            const key = h.hora;
-            if (!map[key]) {
-                map[key] = {
-                    horaKey: key,
-                    hora: h.hora,
-                    tipo: h.tipo,
-                    label: h.label || "",
-                    ids: [],   // ids de las filas en la tabla
-                    _min: this.horaAMinutos(h.hora)
-                };
-            }
-            map[key].ids.push(h.id);
-            if (h.tipo === "clase" && h.dia) {
-                map[key][h.dia] = {
-                    id: h.id,
-                    materia: h.materia_id || "",
-                    profesor: h.profesor_id || ""
-                };
-            }
-        });
-        return Object.values(map).sort((a, b) => a._min - b._min);
-    },
-    },
-
-    watch: {
-        currentSection() {
-            // Cerrar el sidebar mobile siempre que cambie de sección
-            this.mobileSidebarOpen = false;
+            if (!this.selectedCourse) return [];
+            const filas = this.horarios.filter(h => h.curso === this.selectedCourse);
+            const map = {};
+            filas.forEach(h => {
+                const key = h.hora;
+                if (!map[key]) {
+                    map[key] = {
+                        horaKey: key, hora: h.hora, tipo: h.tipo,
+                        label: h.label || "", ids: [],
+                        _min: this.horaAMinutos(h.hora)
+                    };
+                }
+                map[key].ids.push(h.id);
+                if (h.tipo === "clase" && h.dia) {
+                    map[key][h.dia] = {
+                        id: h.id,
+                        materia: h.materia_id || "",
+                        profesor: h.profesor_id || ""
+                    };
+                }
+            });
+            return Object.values(map).sort((a, b) => a._min - b._min);
         }
     },
 
     methods: {
 
+        /* ---------- Helpers ---------- */
         mediaUrl(pathOrUrl) {
             if (!pathOrUrl) return "";
             if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
@@ -194,164 +183,17 @@ const app = createApp({
             if (!m) return 99999;
             return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
         },
+        materiaNombre(id) {
+            const m = this.materias.find(x => x.id === id);
+            return m ? m.nombre : id;
+        },
+        findProfesor(id) { return this.profesores.find(p => p.id === id); },
 
-    /* ---------- Editor de celda ---------- */
-    onCellClick(franja, day) {
-        if (!this.canEditThisCourse(this.selectedCourse)) return;
-        if (franja.tipo === "recreo") return;
-        const cell = franja[day];
-        this.cellEditor = {
-            open: true,
-            franja: franja,
-            day: day,
-            materia: cell ? cell.materia : "",
-            profesor: cell ? cell.profesor : ""
-        };
-    },
-    closeCellEditor() {
-        this.cellEditor.open = false;
-    },
-    async saveCellEditor() {
-        const f = this.cellEditor.franja;
-        const day = this.cellEditor.day;
-        const materia = this.cellEditor.materia;
-        const profesor = this.cellEditor.profesor;
-        const existing = f[day];
-
-        try {
-            if (!materia) {
-                /* Si se dejó vacío: borrar la fila si existía */
-                if (existing && existing.id) {
-                    const { error } = await supabaseClient.from("horarios").delete().eq("id", existing.id);
-                    if (error) throw error;
-                    f[day] = null;
-                    this.horarios = this.horarios.filter(h => h.id !== existing.id);
-                }
-            } else if (existing && existing.id) {
-                /* Update */
-                const { error } = await supabaseClient.from("horarios").update({
-                    materia_id: materia,
-                    profesor_id: profesor
-                }).eq("id", existing.id);
-                if (error) throw error;
-                existing.materia = materia;
-                existing.profesor = profesor;
-            } else {
-                /* Insert */
-                const { data, error } = await supabaseClient.from("horarios").insert({
-                    curso: this.selectedCourse,
-                    hora: f.hora,
-                    tipo: "clase",
-                    dia: day,
-                    materia_id: materia,
-                    profesor_id: profesor,
-                    orden: 0
-                }).select().single();
-                if (error) throw error;
-                f[day] = { id: data.id, materia, profesor };
-                this.horarios.push(data);
-            }
-            this.closeCellEditor();
-            this.showSnackbar("Cell saved");
-        } catch (err) {
-            console.error(err);
-            this.showSnackbar("Error saving cell", "error");
-        }
-    },
-
-    /* ---------- Editar la hora de una franja ---------- */
-    async updateFranjaHora(franja, event) {
-        const newHora = event.target.value;
-        try {
-            for (const id of franja.ids) {
-                const { error } = await supabaseClient.from("horarios").update({ hora: newHora }).eq("id", id);
-                if (error) throw error;
-            }
-            // Actualizar en memoria
-            this.horarios.forEach(h => {
-                if (franja.ids.includes(h.id)) h.hora = newHora;
-            });
-            franja.horaKey = newHora;
-            franja._min = this.horaAMinutos(newHora);
-            this.showSnackbar("Time updated");
-        } catch (err) {
-            console.error(err);
-            this.showSnackbar("Error updating time", "error");
-        }
-    },
-
-    /* ---------- Mover franja arriba/abajo ---------- */
-    async moveFranja(idx, delta) {
-        const list = this.franjasDelCurso;
-        const target = idx + delta;
-        if (target < 0 || target >= list.length) return;
-        // Intercambiar horas
-        const a = list[idx];
-        const b = list[target];
-        const tmp = a.hora;
-        a.hora = b.hora;
-        b.hora = tmp;
-        const tmpKey = a.horaKey;
-        a.horaKey = b.horaKey;
-        b.horaKey = tmpKey;
-        // Persistir
-        try {
-            for (const id of a.ids) {
-                await supabaseClient.from("horarios").update({ hora: a.hora }).eq("id", id);
-            }
-            for (const id of b.ids) {
-                await supabaseClient.from("horarios").update({ hora: b.hora }).eq("id", id);
-            }
-            this.showSnackbar("Reordered");
-        } catch (err) {
-            console.error(err);
-            this.showSnackbar("Error reordering", "error");
-        }
-    },
-
-    /* ---------- Agregar franja ---------- */
-    async addFranja() {
-        const nueva = prompt("New time slot (e.g. 14:00 - 14:40):");
-        if (!nueva) return;
-        try {
-            const { data, error } = await supabaseClient.from("horarios").insert({
-                curso: this.selectedCourse,
-                hora: nueva,
-                tipo: "clase",
-                dia: "",
-                materia_id: "",
-                profesor_id: "",
-                orden: 0
-            }).select().single();
-            if (error) throw error;
-            this.horarios.push(data);
-            this.showSnackbar("Slot added");
-        } catch (err) {
-            console.error(err);
-            this.showSnackbar("Error adding slot", "error");
-        }
-    },
-
-    /* ---------- Borrar franja ---------- */
-    async deleteFranja(franja) {
-        if (!confirm(`Delete time slot "${franja.hora}"?`)) return;
-        try {
-            const { error } = await supabaseClient.from("horarios").delete().in("id", franja.ids);
-            if (error) throw error;
-            this.horarios = this.horarios.filter(h => !franja.ids.includes(h.id));
-            this.showSnackbar("Slot deleted");
-        } catch (err) {
-            console.error(err);
-            this.showSnackbar("Error deleting slot", "error");
-        }
-    },
         /* ---------- Snackbar ---------- */
         showSnackbar(message, type = "success") {
             this.snackbar = { visible: true, message, type };
             clearTimeout(this._snackT);
-            this._snackT = setTimeout(() => {
-                this.snackbar.visible = false;
-            }, 2600);
+            this._snackT = setTimeout(() => { this.snackbar.visible = false; }, 2600);
         },
 
         /* ---------- Permisos ---------- */
@@ -391,36 +233,29 @@ const app = createApp({
                 if (err) throw err;
 
                 this.cursos = (cursos || []).map(c => ({
-                    id: c.id,
-                    nombre: c.nombre,
-                    disabled: !!c.disabled,
-                    orden: c.orden || 0
+                    id: c.id, nombre: c.nombre, disabled: !!c.disabled, orden: c.orden || 0
                 }));
                 this.estudiantes = (estudiantes || []).map(e => ({
-                    id: e.id,
-                    nombre: e.nombre,
-                    foto: this.mediaUrl(e.foto),
-                    curso: e.curso,
-                    fechaNacimiento: e.fecha_nacimiento || "",
-                    nivelIngles: e.nivel_ingles || "",
-                    cargo: e.cargo || "",
-                    isAdmin: !!e.is_admin
+                    id: e.id, nombre: e.nombre, foto: this.mediaUrl(e.foto),
+                    curso: e.curso, fechaNacimiento: e.fecha_nacimiento || "",
+                    nivelIngles: e.nivel_ingles || "", cargo: e.cargo || "",
+                    isAdmin: !!e.is_admin,
+                    hasStore: !!e.has_store
                 }));
                 this.profesores = (profesores || []).map(p => ({
-                    id: p.id,
-                    nombre: p.nombre,
-                    foto: this.mediaUrl(p.foto),
-                    tutor: p.tutor || ""
+                    id: p.id, nombre: p.nombre, foto: this.mediaUrl(p.foto), tutor: p.tutor || ""
                 }));
                 this.materias = (materias || []).map(m => ({
-                    id: m.id,
-                    nombre: m.nombre,
-                    orden: m.orden || 0
+                    id: m.id, nombre: m.nombre, orden: m.orden || 0
                 }));
                 this.horarios = horarios || [];
-                this.galeriaLocal = galeria || [];
+                this.galeriaLocal = (galeria || []).map(g => ({
+                    id: g.id,
+                    curso: g.curso,
+                    ruta: this.mediaUrl(g.ruta),
+                    orden: g.orden || 0
+                }));
 
-                // Actualizar flag admin del usuario actual
                 if (this.currentUser) {
                     const me = this.estudiantes.find(e => e.id === this.currentUser.id);
                     if (me) this.currentUserIsAdmin = !!me.isAdmin;
@@ -434,7 +269,6 @@ const app = createApp({
         /* ---------- Navegación ---------- */
         goTo(section) {
             this.currentSection = section;
-            this.mobileSidebarOpen = false;
             if (section === "students" || section === "schedules" || section === "gallery") {
                 if (!this.selectedCourse && this.cursosDisponibles.length > 0) {
                     if (!this.isAdmin && this.currentUser) {
@@ -445,15 +279,17 @@ const app = createApp({
                 }
             }
         },
-        reloadSection() { /* reactivo, no hace falta hacer nada */ },
+        selectCourse(id) {
+            this.selectedCourse = id;
+            this.drawerOpen = false;
+        },
+        reloadSection() { /* reactivo */ },
 
-        /* ---------- Cursos ---------- */
+        /* ---------- CURSOS ---------- */
         async saveCurso(c) {
             try {
                 const { error } = await supabaseClient.from("cursos").update({
-                    nombre: c.nombre,
-                    disabled: c.disabled,
-                    orden: c.orden
+                    nombre: c.nombre, disabled: c.disabled, orden: c.orden
                 }).eq("id", c.id);
                 if (error) throw error;
                 this.showSnackbar("Course saved");
@@ -462,16 +298,43 @@ const app = createApp({
                 this.showSnackbar("Error saving course", "error");
             }
         },
+        async deleteCurso(c) {
+            if (!confirm(`Delete course "${c.nombre}"?`)) return;
+            try {
+                const { error } = await supabaseClient.from("cursos").delete().eq("id", c.id);
+                if (error) throw error;
+                this.cursos = this.cursos.filter(x => x.id !== c.id);
+                this.showSnackbar("Course deleted");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error deleting course", "error");
+            }
+        },
+        async openAddCourse() {
+            const nombre = prompt("Course name (e.g. 11A):");
+            if (!nombre || !nombre.trim()) return;
+            const id = normalize(nombre);
+            if (this.cursos.some(c => c.id === id)) { alert("That course already exists."); return; }
+            try {
+                const { error } = await supabaseClient.from("cursos").insert({
+                    id, nombre: nombre.trim(), disabled: false, orden: this.cursos.length
+                });
+                if (error) throw error;
+                await this.loadAllData();
+                this.showSnackbar("Course added");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error adding course", "error");
+            }
+        },
 
-        /* ---------- Estudiantes ---------- */
+        /* ---------- ESTUDIANTES ---------- */
         async saveStudent(s) {
             try {
                 const { error } = await supabaseClient.from("estudiantes").update({
-                    nombre: s.nombre,
-                    curso: s.curso,
-                    cargo: s.cargo,
-                    nivel_ingles: s.nivelIngles,
-                    fecha_nacimiento: s.fechaNacimiento
+                    nombre: s.nombre, curso: s.curso, cargo: s.cargo,
+                    nivel_ingles: s.nivelIngles, fecha_nacimiento: s.fechaNacimiento,
+                    has_store: !!s.hasStore
                 }).eq("id", s.id);
                 if (error) throw error;
                 this.showSnackbar("Student saved");
@@ -480,23 +343,49 @@ const app = createApp({
                 this.showSnackbar("Error saving student", "error");
             }
         },
+        async deleteStudent(s) {
+            if (!confirm(`Delete "${s.nombre}"?`)) return;
+            try {
+                const { error } = await supabaseClient.from("estudiantes").delete().eq("id", s.id);
+                if (error) throw error;
+                this.estudiantes = this.estudiantes.filter(x => x.id !== s.id);
+                this.showSnackbar("Student deleted");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error deleting student", "error");
+            }
+        },
+        async openAddStudent() {
+            const course = this.selectedCourse || (this.cursosDisponibles[0] && this.cursosDisponibles[0].id);
+            if (!course) { alert("Pick a course first."); return; }
+            const nombre = prompt(`Student full name (adds to ${course}):`);
+            if (!nombre || !nombre.trim()) return;
+            try {
+                const { error } = await supabaseClient.from("estudiantes").insert({
+                    nombre: nombre.trim(), curso: course,
+                    cargo: "", nivel_ingles: "", fecha_nacimiento: ""
+                });
+                if (error) throw error;
+                await this.loadAllData();
+                this.showSnackbar("Student added");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error adding student", "error");
+            }
+        },
         async uploadStudentPhoto(s, event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
             if (!this.canEditStudent(s)) return;
-
             try {
                 const path = `estudiantes/${s.id}_${Date.now()}_${safePath(file.name)}`;
                 const { error: upErr } = await supabaseClient.storage.from("media").upload(path, file, { upsert: true });
                 if (upErr) throw upErr;
-
-                const { error: updErr } = await supabaseClient.from("estudiantes")
-                    .update({ foto: path }).eq("id", s.id);
+                const { error: updErr } = await supabaseClient.from("estudiantes").update({ foto: path }).eq("id", s.id);
                 if (updErr) throw updErr;
-
                 const { data } = supabaseClient.storage.from("media").getPublicUrl(path);
-                p._fotoFailed = false;
-                p.foto = data.publicUrl;
+                s._fotoFailed = false;
+                s.foto = data.publicUrl;
                 this.showSnackbar("Photo updated");
             } catch (err) {
                 console.error(err);
@@ -504,12 +393,11 @@ const app = createApp({
             }
         },
 
-        /* ---------- Profesores ---------- */
+        /* ---------- PROFESORES ---------- */
         async saveProfesor(p) {
             try {
                 const { error } = await supabaseClient.from("profesores").update({
-                    nombre: p.nombre,
-                    tutor: p.tutor
+                    nombre: p.nombre, tutor: p.tutor
                 }).eq("id", p.id);
                 if (error) throw error;
                 this.showSnackbar("Teacher saved");
@@ -518,19 +406,43 @@ const app = createApp({
                 this.showSnackbar("Error saving teacher", "error");
             }
         },
+        async deleteProfesor(p) {
+            if (!confirm(`Delete "${p.nombre}"?`)) return;
+            try {
+                const { error } = await supabaseClient.from("profesores").delete().eq("id", p.id);
+                if (error) throw error;
+                this.profesores = this.profesores.filter(x => x.id !== p.id);
+                this.showSnackbar("Teacher deleted");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error deleting teacher", "error");
+            }
+        },
+        async openAddTeacher() {
+            const nombre = prompt("Teacher full name:");
+            if (!nombre || !nombre.trim()) return;
+            const id = Date.now();
+            try {
+                const { error } = await supabaseClient.from("profesores").insert({
+                    id, nombre: nombre.trim(), tutor: "", foto: ""
+                });
+                if (error) throw error;
+                await this.loadAllData();
+                this.showSnackbar("Teacher added");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error adding teacher", "error");
+            }
+        },
         async uploadProfesorPhoto(p, event) {
             const file = event.target.files && event.target.files[0];
             if (!file || !this.isAdmin) return;
-
             try {
                 const path = `profesores/${p.id}_${Date.now()}_${safePath(file.name)}`;
                 const { error: upErr } = await supabaseClient.storage.from("media").upload(path, file, { upsert: true });
                 if (upErr) throw upErr;
-
-                const { error: updErr } = await supabaseClient.from("profesores")
-                    .update({ foto: path }).eq("id", p.id);
+                const { error: updErr } = await supabaseClient.from("profesores").update({ foto: path }).eq("id", p.id);
                 if (updErr) throw updErr;
-
                 const { data } = supabaseClient.storage.from("media").getPublicUrl(path);
                 p._fotoFailed = false;
                 p.foto = data.publicUrl;
@@ -540,12 +452,11 @@ const app = createApp({
             }
         },
 
-        /* ---------- Materias ---------- */
+        /* ---------- MATERIAS ---------- */
         async saveMateria(m) {
             try {
                 const { error } = await supabaseClient.from("materias").update({
-                    nombre: m.nombre,
-                    orden: m.orden
+                    nombre: m.nombre, orden: m.orden
                 }).eq("id", m.id);
                 if (error) throw error;
                 this.showSnackbar("Subject saved");
@@ -566,17 +477,17 @@ const app = createApp({
                 this.showSnackbar("Error deleting subject", "error");
             }
         },
-        async addMateria() {
+        async openAddSubject() {
             const id = prompt("Subject ID (e.g. matematicas):");
             if (!id) return;
-            const nombre = prompt("Subject name:", id);
-            if (!nombre) return;
+            const cleanId = normalize(id);
+            const nombre = prompt("Subject name:", id) || id;
             try {
                 const { error } = await supabaseClient.from("materias").insert({
-                    id, nombre, orden: this.materias.length
+                    id: cleanId, nombre: nombre.trim(), orden: this.materias.length
                 });
                 if (error) throw error;
-                this.materias.push({ id, nombre, orden: this.materias.length });
+                await this.loadAllData();
                 this.showSnackbar("Subject added");
             } catch (err) {
                 console.error(err);
@@ -584,30 +495,122 @@ const app = createApp({
             }
         },
 
-        /* ---------- Horarios ---------- */
-        async saveHorario(h) {
+        /* ---------- SCHEDULE ---------- */
+        onCellClick(franja, day) {
+            if (!this.canEditThisCourse(this.selectedCourse)) return;
+            if (franja.tipo === "recreo") return;
+            const cell = franja[day];
+            this.cellEditor = {
+                open: true, franja, day,
+                materia: cell ? cell.materia : "",
+                profesor: cell ? cell.profesor : ""
+            };
+        },
+        closeCellEditor() { this.cellEditor.open = false; },
+        async saveCellEditor() {
+            const f = this.cellEditor.franja;
+            const day = this.cellEditor.day;
+            const materia = this.cellEditor.materia;
+            const profesor = this.cellEditor.profesor;
+            const existing = f[day];
             try {
-                const { error } = await supabaseClient.from("horarios").update({
-                    hora: h.hora,
-                    dia: h.dia,
-                    tipo: h.tipo,
-                    materia_id: h.materia_id,
-                    profesor_id: h.profesor_id
-                }).eq("id", h.id);
-                if (error) throw error;
-                this.showSnackbar("Schedule saved");
+                if (!materia) {
+                    if (existing && existing.id) {
+                        const { error } = await supabaseClient.from("horarios").delete().eq("id", existing.id);
+                        if (error) throw error;
+                        f[day] = null;
+                        this.horarios = this.horarios.filter(h => h.id !== existing.id);
+                    }
+                } else if (existing && existing.id) {
+                    const { error } = await supabaseClient.from("horarios").update({
+                        materia_id: materia, profesor_id: profesor
+                    }).eq("id", existing.id);
+                    if (error) throw error;
+                    existing.materia = materia;
+                    existing.profesor = profesor;
+                } else {
+                    const { data, error } = await supabaseClient.from("horarios").insert({
+                        curso: this.selectedCourse, hora: f.hora, tipo: "clase",
+                        dia: day, materia_id: materia, profesor_id: profesor, orden: 0
+                    }).select().single();
+                    if (error) throw error;
+                    f[day] = { id: data.id, materia, profesor };
+                    this.horarios.push(data);
+                }
+                this.closeCellEditor();
+                this.showSnackbar("Cell saved");
             } catch (err) {
                 console.error(err);
-                this.showSnackbar("Error saving schedule", "error");
+                this.showSnackbar("Error saving cell", "error");
+            }
+        },
+        async updateFranjaHora(franja, event) {
+            const newHora = event.target.value;
+            try {
+                for (const id of franja.ids) {
+                    const { error } = await supabaseClient.from("horarios").update({ hora: newHora }).eq("id", id);
+                    if (error) throw error;
+                }
+                this.horarios.forEach(h => { if (franja.ids.includes(h.id)) h.hora = newHora; });
+                franja.horaKey = newHora;
+                franja._min = this.horaAMinutos(newHora);
+                this.showSnackbar("Time updated");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error updating time", "error");
+            }
+        },
+        async moveFranja(idx, delta) {
+            const list = this.franjasDelCurso;
+            const target = idx + delta;
+            if (target < 0 || target >= list.length) return;
+            const a = list[idx], b = list[target];
+            const tmpHora = a.hora, tmpKey = a.horaKey;
+            a.hora = b.hora; a.horaKey = b.horaKey;
+            b.hora = tmpHora; b.horaKey = tmpKey;
+            try {
+                for (const id of a.ids) await supabaseClient.from("horarios").update({ hora: a.hora }).eq("id", id);
+                for (const id of b.ids) await supabaseClient.from("horarios").update({ hora: b.hora }).eq("id", id);
+                this.showSnackbar("Reordered");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error reordering", "error");
+            }
+        },
+        async addFranja() {
+            const nueva = prompt("New time slot (e.g. 14:00 - 14:40):");
+            if (!nueva) return;
+            try {
+                const { data, error } = await supabaseClient.from("horarios").insert({
+                    curso: this.selectedCourse, hora: nueva, tipo: "clase",
+                    dia: "", materia_id: "", profesor_id: "", orden: 0
+                }).select().single();
+                if (error) throw error;
+                this.horarios.push(data);
+                this.showSnackbar("Slot added");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error adding slot", "error");
+            }
+        },
+        async deleteFranja(franja) {
+            if (!confirm(`Delete time slot "${franja.hora}"?`)) return;
+            try {
+                const { error } = await supabaseClient.from("horarios").delete().in("id", franja.ids);
+                if (error) throw error;
+                this.horarios = this.horarios.filter(h => !franja.ids.includes(h.id));
+                this.showSnackbar("Slot deleted");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error deleting slot", "error");
             }
         },
 
-        /* ---------- Galería local ---------- */
+        /* ---------- GALERÍA ---------- */
         async saveGaleriaFoto(g) {
             try {
                 const { error } = await supabaseClient.from("galeria_local").update({
-                    ruta: g.ruta,
-                    orden: g.orden
+                    ruta: g.ruta, orden: g.orden
                 }).eq("id", g.id);
                 if (error) throw error;
                 this.showSnackbar("Photo saved");
@@ -617,7 +620,7 @@ const app = createApp({
             }
         },
         async deleteGaleriaFoto(g) {
-            if (!confirm("Delete this photo from gallery?")) return;
+            if (!confirm("Delete this photo?")) return;
             try {
                 const { error } = await supabaseClient.from("galeria_local").delete().eq("id", g.id);
                 if (error) throw error;
@@ -628,37 +631,50 @@ const app = createApp({
                 this.showSnackbar("Error deleting photo", "error");
             }
         },
+        async openAddGalleryPhoto() {
+            if (!this.selectedCourse) { alert("Pick a course first."); return; }
+            const url = prompt("Image URL:");
+            if (!url || !url.trim()) return;
+            try {
+                const { error } = await supabaseClient.from("galeria_local").insert({
+                    curso: this.selectedCourse, ruta: url.trim(), orden: this.galeriaLocal.length
+                });
+                if (error) throw error;
+                await this.loadAllData();
+                this.showSnackbar("Photo added");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error adding photo", "error");
+            }
+        },
 
         /* ---------- Logout ---------- */
         signOut() {
             sessionStorage.removeItem("oasis_session");
+            localStorage.removeItem("oasis_session");
             window.location.href = "index.html";
         },
 
         /* ---------- Init ---------- */
         async init() {
-            const saved = sessionStorage.getItem("oasis_session");
-            if (!saved) {
-                window.__adminShowLogin();
-                return;
-            }
-            try {
-                this.currentUser = JSON.parse(saved);
-            } catch {
-                window.__adminShowLogin();
-                return;
-            }
+            const saved = sessionStorage.getItem("oasis_session") || localStorage.getItem("oasis_session");
+            if (!saved) { window.__adminShowLogin(); return; }
+            try { this.currentUser = JSON.parse(saved); }
+            catch { window.__adminShowLogin(); return; }
 
             await this.loadAllData();
 
             const me = this.estudiantes.find(e => e.id === this.currentUser.id);
             if (!me || (!me.isAdmin && (!me.cargo || !me.cargo.trim()))) {
-                // No autorizado
                 alert("You don't have permission to access the admin panel.");
                 window.location.href = "index.html";
                 return;
             }
             this.currentUserIsAdmin = !!me.isAdmin;
+
+            if (this.cursosDisponibles.length > 0) {
+                this.selectedCourse = this.cursosDisponibles[0].id;
+            }
 
             window.__adminHideLogin();
             this.goTo("courses");
@@ -668,19 +684,22 @@ const app = createApp({
     mounted() {
         this.init();
 
+        // Cerrar dropdown del switcher al click afuera
+        document.addEventListener("click", (e) => {
+            if (this.sectionSwitcherOpen && !e.target.closest(".fs-section-switcher")) {
+                this.sectionSwitcherOpen = false;
+            }
+        });
+
         loginSubmitBtn.addEventListener("click", async () => {
             await this.loadAllData();
-
             const u = normalize(loginUserInput.value);
             const p = normalize(loginPassInput.value);
             const match = this.estudiantes.find(e => {
                 const c = loginCredentials(e);
                 return c.username === u && c.password === p;
             });
-            if (!match) {
-                loginErrorMsg.style.display = "block";
-                return;
-            }
+            if (!match) { loginErrorMsg.style.display = "block"; return; }
             if (!match.isAdmin && (!match.cargo || !match.cargo.trim())) {
                 loginErrorMsg.textContent = "You don't have admin permissions.";
                 loginErrorMsg.style.display = "block";
@@ -688,9 +707,20 @@ const app = createApp({
             }
             this.currentUser = { id: match.id, nombre: shortName(match.nombre) };
             this.currentUserIsAdmin = !!match.isAdmin;
-            sessionStorage.setItem("oasis_session", JSON.stringify(this.currentUser));
+            const remember = document.getElementById("loginRemember");
+            const payload = JSON.stringify(this.currentUser);
+            if (remember && remember.checked) {
+                localStorage.setItem("oasis_session", payload);
+                sessionStorage.removeItem("oasis_session");
+            } else {
+                sessionStorage.setItem("oasis_session", payload);
+                localStorage.removeItem("oasis_session");
+            }
             loginErrorMsg.style.display = "none";
             window.__adminHideLogin();
+            if (this.cursosDisponibles.length > 0) {
+                this.selectedCourse = this.cursosDisponibles[0].id;
+            }
             this.goTo("courses");
         });
         loginPassInput.addEventListener("keydown", (e) => {

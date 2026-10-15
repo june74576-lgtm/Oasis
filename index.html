@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="chat-style.css">
     <style>
         .photo-slot.zoomable img { cursor: zoom-in; }
     </style>
@@ -23,7 +24,6 @@
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
-    <h1 class="login-wordmark">Oasis</h1>
     <div class="login-sheet">
         <div class="login-form-wrap">
             <h2 class="login-form-title">Sign In</h2>
@@ -54,6 +54,10 @@
                 </div>
             </div>
 
+            <label class="login-remember">
+                <input type="checkbox" id="loginRemember">
+                <span>Keep me signed in</span>
+            </label>
             <p class="login-error-msg" id="loginErrorMsg" style="display:none;">
                 Wrong username or password
             </p>
@@ -78,11 +82,21 @@
                         <photo-slot :src="currentUserPhoto" :alt="currentUser.nombre"></photo-slot>
                     </span>
                     <span class="drawer-user-name">{{ currentUser.nombre }}</span>
+                    <svg class="drawer-user-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6"/>
+                    </svg>
                 </button>
                 <div class="drawer-user-menu">
-                    <button v-if="canAccessAdmin" class="drawer-user-menu-item" @click="goToAdmin">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>
-                        Admin panel
+                    <button class="drawer-user-menu-item" @click="openProfile">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                        Profile
+                    </button>
+                    <button v-if="hasStore" class="drawer-user-menu-item" @click="goToMyStore">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 8h14l-1.2 12H6.2z"/>
+                            <path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
+                        </svg>
+                        My Store
                     </button>
                     <button class="drawer-user-menu-item danger" @click="signOut">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
@@ -106,6 +120,16 @@
                     @click="selectCourse(c.id)">
                 <span class="drawer-course-name">{{ c.nombre }}</span>
             </button>
+            <div class="drawer-reze" v-if="currentUser">
+                <img src="reze.png" alt="" class="drawer-reze-img">
+                <p class="drawer-reze-msg">
+                    ^^ H-Hi... did you find any errors?<br>Send me a message!
+                </p>
+                <button class="drawer-reze-copy" @click="copySupportPhone" :class="{ copied: copiedPhone }">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                    {{ copiedPhone ? 'Copied!' : '+593 98 027 1168' }}
+                </button>
+            </div>
         </nav>
 
         <div class="drawer-footer" v-if="!currentUser">
@@ -133,6 +157,13 @@
             </button>
 
             <div class="fs-section-menu">
+                <button v-if="canAccessAdmin" class="fs-section-item" type="button" @click="goToAdmin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3.5 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                    </svg>
+                    <span>Admin panel</span>
+                </button>
                 <button class="fs-section-item active" type="button" @click="sectionSwitcherOpen = false">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v18H5.5A1.5 1.5 0 0 1 4 19.5z"/>
@@ -149,14 +180,13 @@
                     <span>Secrets</span>
                 </a>
 
-                <button class="fs-section-item disabled" type="button" disabled>
+                <a class="fs-section-item" href="store.html">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M5 8h14l-1.2 12H6.2z"/>
                         <path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
                     </svg>
                     <span>Store</span>
-                    <span class="fs-section-badge">Soon</span>
-                </button>
+                </a>
             </div>
         </div>
     </div>
@@ -181,12 +211,6 @@
             <section class="fs-section">
                 <div class="fs-section-header"><h2>Schedule</h2><div class="divider-pill"></div></div>
                 <div class="horario-wrapper">
-                    <button class="announcements-open-btn" @click="openAnnouncementsModal">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/><path d="M8 21v-6h8v6"/></svg>
-                        <span>Open announcements</span>
-                        <span class="announcements-count">{{ announcementsCount || '' }}</span>
-                    </button>
-
                     <table class="horario">
                         <thead>
                             <tr>
@@ -220,7 +244,6 @@
                                     class="day-tab" :class="{ active: i === dayTab }"
                                     @click="dayTab = i">{{ p.label }}</button>
                         </div>
-                        <button class="announcements-mobile-btn" type="button" @click="openAnnouncementsModal">Announcements</button>
                         <div class="day-track">
                             <div v-for="(p, i) in horarioMobilePanels" :key="p.day"
                                  class="day-panel" :class="{ active: i === dayTab }">
@@ -273,14 +296,24 @@
                 <div class="fs-section-header"><h2>Gallery</h2><div class="divider-pill"></div></div>
                 <div class="galeria-viewport" ref="galeriaViewport">
                     <p v-if="galeriaAll.length === 0" class="galeria-empty">No photos</p>
-                    <div v-else class="galeria-track" ref="galeriaTrack" :style="galeriaTrackStyle">
-                        <div v-for="(item, i) in galeriaDoubled" :key="i" class="galeria-item">
-                            <img :src="item.ruta" alt=""
-                                style="cursor: zoom-in"
-                                @error="onGalleryImgError"
-                                @click="openImageViewer(item.ruta)">
+                    <template v-else>
+                        <div class="galeria-row">
+                            <div class="galeria-track" :style="galeriaTrackStyle">
+                                <div v-for="(item, i) in galeriaDoubled" :key="'a' + i" class="galeria-item">
+                                    <img :src="item.ruta" alt="" style="cursor: zoom-in"
+                                        @error="onGalleryImgError" @click="openImageViewer(item.ruta)">
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        <div class="galeria-row">
+                            <div class="galeria-track reverse" :style="galeriaTrackStyle">
+                                <div v-for="(item, i) in galeriaDoubled" :key="'b' + i" class="galeria-item">
+                                    <img :src="item.ruta" alt="" style="cursor: zoom-in"
+                                        @error="onGalleryImgError" @click="openImageViewer(item.ruta)">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="dropzone" v-if="canUploadGaleria"
@@ -294,7 +327,7 @@
                     <p v-if="galleryUploading">Uploading…</p>
                     <p v-else>Drag a photo here, or <span class="dropzone-link">click</span> (max. 10 MB each)</p>
                 </div>
-                <p class="login-hint" v-else>{{ galeriaHint }}</p>
+                <p class="login-hint" v-if="galeriaHint">{{ galeriaHint }}</p>
             </section>
 
         </div>
@@ -430,58 +463,6 @@
         </div>
     </div>
 
-    <!-- Modal Anuncios -->
-    <div class="mini-overlay" :class="{ active: announcementsOpen }" @click.self="closeAnnouncementsModal">
-        <div class="mini-modal announcements-modal">
-            <button class="modal-close" @click="closeAnnouncementsModal" aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-            </button>
-            <h3>Announcements</h3>
-            <div class="divider-pill"></div>
-
-            <div class="announcements-chat" ref="announcementsChat">
-                <p v-if="announcementsLoading" class="announcements-empty">Loading…</p>
-                <p v-else-if="announcements.length === 0" class="announcements-empty">No announcements yet.</p>
-
-                <div v-for="msg in announcements" :key="msg.id" class="msg">
-                    <div class="msg-avatar"
-                         :class="{ 'has-photo': !!studentFoto(msg.autor_id) }"
-                         @click="studentFoto(msg.autor_id) && openImageViewer(studentFoto(msg.autor_id))">
-                        <photo-slot :src="studentFoto(msg.autor_id)" :alt="msg.autor_nombre || ''"></photo-slot>
-                    </div>
-
-                    <div class="msg-main">
-                        <div class="msg-head">
-                            <span class="msg-author">{{ msg.autor_nombre || 'Someone' }}</span>
-                            <span v-if="msg.autor_cargo" class="msg-role">{{ msg.autor_cargo }}</span>
-                            <span class="msg-date">{{ formatDateTime(msg.fecha) }}</span>
-                        </div>
-
-                        <div class="msg-body" v-html="renderAnnouncementMessage(msg.mensaje)" @click="onMsgBodyClick"></div>
-
-                        <div class="msg-footer" v-if="msg.edited_at || (currentUser && currentUser.id === msg.autor_id)">
-                            <span v-if="msg.edited_at" class="msg-edited">(edited)</span>
-                            <div v-if="currentUser && currentUser.id === msg.autor_id" class="msg-actions">
-                                <button class="msg-action-btn" @click="editAnnouncement(msg)">Edit</button>
-                                <button class="msg-action-btn danger" @click="deleteAnnouncement(msg)">Delete</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="announcements-input-wrap" v-if="canPostAnnouncement">
-                <button class="announcements-mention-btn" type="button" title="Mention a subject" @click="insertMention">{ }</button>
-                <textarea ref="announcementsTextarea" v-model="announcementsInput"
-                          placeholder="Write an announcement… use {subjectId} to mention a subject" rows="2"></textarea>
-                <button class="btn-filled small" @click="sendAnnouncement" :disabled="announcementsSending">
-                    {{ announcementsSending ? '…' : (editingAnnouncementId ? 'Save' : 'Send') }}
-                </button>
-            </div>
-            <p class="login-hint" v-else>{{ announcementsHint }}</p>
-        </div>
-    </div>
-
     <!-- Image viewer -->
     <div class="image-viewer" :class="{ active: imageViewerOpen }" @click.self="closeImageViewer">
         <button class="image-viewer-close" @click="closeImageViewer" aria-label="Close">
@@ -490,6 +471,172 @@
         <img :src="imageViewerSrc" alt="">
     </div>
 
+    <!-- Profile modal -->
+    <div class="profile-overlay" :class="{ active: profileOpen }" @click.self="closeProfile" v-if="profileOpen && profileStudent">
+        <div class="profile-modal" v-if="profileStudent">
+            <div class="profile-head">
+                <div class="profile-avatar">
+                    <img v-if="profileStudent.foto" :src="profileStudent.foto" alt="">
+                    <div v-else class="no-photo"></div>
+                </div>
+                <div class="profile-head-info">
+                    <h2 class="profile-name">{{ profileStudent.nombre }}</h2>
+                    <p class="profile-course">{{ currentCourseObj ? currentCourseObj.nombre : '' }}</p>
+                </div>
+                <button class="profile-close" @click="closeProfile" aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+            </div>
+
+            <div class="profile-body">
+                <p class="profile-section-title">Social</p>
+                <div class="profile-socials">
+                    <div class="profile-social-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+                        <input type="text" v-model="profileSocials.instagram" placeholder="Instagram">
+                    </div>
+                    <div class="profile-social-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3.5a5 5 0 0 1-4 4.5v3h3a1 1 0 0 1 0 2h-3v6a1 1 0 0 1-2 0v-6H7a1 1 0 0 1 0-2h3v-3a1 1 0 0 1 1-1 3 3 0 0 0 3-3.5Z"/></svg>
+                        <input type="text" v-model="profileSocials.tiktok" placeholder="TikTok">
+                    </div>
+                    <div class="profile-social-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.5 8.5 0 1 1-3.5-6.8L21 4l-1.5 3.5A8.5 8.5 0 0 1 21 11.5Z"/><path d="M8 10h.01M16 10h.01M9 14c1 1 5 1 6 0"/></svg>
+                        <input type="text" v-model="profileSocials.whatsapp" placeholder="WhatsApp">
+                    </div>
+                    <div class="profile-social-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M7 15c2-1 3-2 3-3M14 6c1.5.5 3 2 4 4M6 10c1-2 3-3 5-4"/></svg>
+                        <input type="text" v-model="profileSocials.spotify" placeholder="Spotify">
+                    </div>
+                </div>
+
+                <p class="profile-section-title">Grades</p>
+                <div class="profile-grades">
+                    <div class="profile-grade-card" v-for="t in trimestres" :key="t.id">
+                        <div class="profile-grade-card-head">
+                            <span>{{ t.label }}</span>
+                            <span>{{ t.promedio.toFixed(1) }}</span>
+                        </div>
+                        <div class="profile-grade-inputs">
+                            <input type="number" step="0.1" min="0" max="10" v-model.number="t.n1">
+                            <input type="number" step="0.1" min="0" max="10" v-model.number="t.n2">
+                            <input type="number" step="0.1" min="0" max="10" v-model.number="t.n3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button class="profile-btn" @click="closeProfile">Cancel</button>
+                <button class="profile-btn primary" @click="saveProfile">Save</button>
+            </div>
+        </div>
+    </div>
+    <!-- Chat FAB -->
+    <button class="chat-fab" :class="{ hidden: chatOpen }" @click="openChat" aria-label="Open chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.4 0-2.7-.3-3.8-.9L4 21l1.9-4.7A8.5 8.5 0 1 1 21 11.5Z"/>
+        </svg>
+    </button>
+
+    <!-- Chat overlay -->
+    <div class="chat-overlay" :class="{ active: chatOpen }" @click="closeChat"></div>
+
+    <!-- Chat panel -->
+    <aside class="chat-panel" :class="{ active: chatOpen }">
+        <div class="chat-header">
+            <h2 class="chat-title">Chat</h2>
+            <button class="chat-close" @click="closeChat" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M6 6l12 12M18 6 6 18"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="chat-feed" ref="chatFeed">
+            <p v-if="chatLoading" class="chat-empty">Loading…</p>
+            <p v-else-if="chatMessages.length === 0" class="chat-empty">No messages yet. Say hi!</p>
+
+            <div v-for="m in chatMessages" :key="m.id" class="chat-msg">
+                <div class="chat-msg-avatar">
+                    <img v-if="studentFoto(m.autor_id)" :src="studentFoto(m.autor_id)" alt="">
+                    <div v-else class="chat-msg-avatar-fallback">{{ (m.autor_nombre || "?")[0] }}</div>
+                </div>
+                <div class="chat-msg-body">
+                    <div class="chat-msg-head">
+                        <span class="chat-msg-author">{{ m.autor_nombre || "Someone" }}</span>
+                        <span class="chat-msg-date">{{ formatDateTime(m.fecha) }}</span>
+                    </div>
+
+                    <div v-if="!m.comprimido" class="chat-msg-text" v-html="renderChatMarkdown(m.mensaje)"></div>
+
+                    <button v-else class="chat-msg-compressed" @click="openCompressed(m)" title="Open message">
+                        <svg class="chat-msg-compressed-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2.5h8A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>
+                        </svg>
+                        <span class="chat-msg-compressed-text">{{ compressMessage(m.mensaje) }}</span>
+                    </button>
+                </div>
+                <button v-if="currentUser && currentUser.id === m.autor_id"
+                        class="chat-msg-delete"
+                        @click.stop="deleteChatMessage(m)"
+                        title="Delete message">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7h16"/>
+                        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                        <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-compose" v-if="canWriteChat">
+            <div class="chat-compose-inner">
+                <label class="chat-compose-compress" :class="{ active: chatComprimido }" title="Send as compressed">
+                    <input type="checkbox" v-model="chatComprimido">
+                    <svg class="chat-compose-compress-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2.5h8A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>
+                    </svg>
+                </label>
+                <textarea
+                    v-model="chatTexto"
+                    placeholder="Write a message…"
+                    rows="1"
+                    @keydown.enter.exact.prevent="sendChatMessage"
+                    @input="autoGrowChat"
+                    ref="chatTextarea"></textarea>
+                <button class="chat-compose-send" @click="sendChatMessage" :disabled="chatSending || !chatTexto.trim()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 2 11 13"/>
+                        <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <p class="chat-compose-hint" v-else>{{ chatWriteHint }}</p>
+    </aside>
+
+    <!-- Compressed message viewer -->
+    <div class="compressed-viewer" :class="{ active: compressedOpen }" @click.self="closeCompressed">
+        <div class="compressed-viewer-card">
+            <div class="compressed-viewer-header">
+                <button class="compressed-viewer-btn" @click="copyCompressed" :title="compressedCopied ? 'Copied!' : 'Copy full message'">
+                    <svg v-if="!compressedCopied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="11" height="11" rx="2"/>
+                        <path d="M5 15V5a2 2 0 0 1 2-2h10"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                </button>
+                <button class="compressed-viewer-btn danger" @click="closeCompressed" title="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M6 6l12 12M18 6 6 18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="compressed-viewer-body">{{ compressedText }}</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -504,6 +651,32 @@ document.querySelectorAll('.login-field-eye').forEach(btn => {
         btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
     });
 });
+</script>
+
+<script>
+(function(){
+    const GIFS = [
+        "https://i.pinimg.com/originals/a2/15/16/a2151608a083bbfa3e5c8976112ec7c2.gif",
+        "https://i.pinimg.com/originals/2d/e6/a0/2de6a0ff8360a7c6da4323c3d0a1bf9b.gif",
+        "https://i.pinimg.com/originals/e4/c3/5f/e4c35f7646d0d7336a3e4cb50edf5c5c.gif",
+        "https://i.redd.it/h8cnhm4y6waf1.gif",
+        "https://i.pinimg.com/originals/e7/99/84/e79984d122840f899033d13b9ad31404.gif"
+    ];
+    const shuffled = [...GIFS].sort(() => Math.random() - 0.5);
+
+    function tryLoad(i) {
+        if (i >= shuffled.length) return;
+        const img = new Image();
+        img.onload = () => {
+            document.documentElement.style.setProperty(
+                "--login-bg", `url("${shuffled[i]}")`
+            );
+        };
+        img.onerror = () => tryLoad(i + 1);
+        img.src = shuffled[i];
+    }
+    tryLoad(0);
+})();
 </script>
 
 <script src="app.js?v=5"></script>

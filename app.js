@@ -15,6 +15,11 @@ const FILE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_GALERIA_SIZE = 10 * 1024 * 1024;
 
+/* ===== Owner-only admin ===== */
+/* Poné acá tu ID (el que está en la tabla `estudiantes`) */
+const OWNER_ID = 11;
+
+
 /* Markdown */
 if (window.marked) {
     window.marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
@@ -180,14 +185,6 @@ const app = createApp({
             studentPhotoFailed: false,
             radarOpen: false,
 
-            announcementsOpen: false,
-            announcementsLoading: false,
-            announcements: [],
-            announcementsInput: "",
-            editingAnnouncementId: null,
-            announcementsSending: false,
-            announcementsCount: 0,
-
             galeriaExtra: [],
             galleryUploading: false,
 
@@ -202,7 +199,26 @@ const app = createApp({
             _galeriaTimer: null,
             _galeriaResume: null,
             _galeriaListeners: false,
-            _dataLoaded: false
+            _dataLoaded: false,
+
+            profileOpen: false,
+            profileStudent: null,
+            profileSocials: { instagram: "", tiktok: "", whatsapp: "", spotify: "" },
+            trimestres: [
+                { id: "t1", label: "Trimestre 1", n1: 0, n2: 0, n3: 0 },
+                { id: "t2", label: "Trimestre 2", n1: 0, n2: 0, n3: 0 },
+                { id: "t3", label: "Trimestre 3", n1: 0, n2: 0, n3: 0 }
+            ],
+            copiedPhone: false,
+            chatOpen: false,
+            chatMessages: [],
+            chatLoading: false,
+            chatSending: false,
+            chatTexto: "",
+            chatComprimido: false,
+            compressedOpen: false,
+            compressedText: "",
+            compressedCopied: false,
         };
     },
 
@@ -316,18 +332,30 @@ const app = createApp({
         },
         galeriaTrackStyle() {
             if (this.galeriaAll.length === 0) return {};
-            const duration = Math.max(this.galeriaAll.length * 5, 20);
-            return { animation: `galeriaScroll ${duration}s linear infinite` };
+            const duration = Math.max(this.galeriaAll.length * 12, 60);
+            return { animationDuration: `${duration}s` };
         },
         canUploadGaleria() {
-            return !!(this.currentUser && !this.currentUserIsAdmin
-                && this.supabaseReady && this.currentCourse);
+            return !!(this.currentUser && this.supabaseReady && this.currentCourse);
         },
         galeriaHint() {
             if (!this.supabaseReady) return "Supabase isn't configured yet.";
-            return "Sign in to add photos to the gallery.";
+            if (!this.currentUser) return "Sign in to add photos to the gallery.";
+            return "";
         },
-
+        canWriteChat() {
+            if (!this.currentUser || !this.supabaseReady || !this.currentCourse) return false;
+            // El owner puede escribir en cualquier curso
+            if (this.canAccessAdmin) return true;
+            const me = this.getStudentById(this.currentUser.id);
+            if (!me) return false;
+            return me.curso === this.currentCourse;
+        },
+        chatWriteHint() {
+            if (!this.currentUser) return "Sign in to write.";
+            if (!this.canWriteChat) return "You can only write in your own course. Here you can just read.";
+            return "";
+        },
         materiaBase() { return this.findMateria(this.materiaBaseId); },
         materiaNombreActual() {
             return this.materiaBase ? this.materiaBase.nombre : (this.materiaBaseId || "");
@@ -396,20 +424,6 @@ const app = createApp({
             return this.viewportWidth <= 800 && this.studentSelected.cargo.length > 18;
         },
 
-        canPostAnnouncement() {
-            if (!this.currentUser || !this.supabaseReady || !this.currentCourse) return false;
-            const me = this.getStudentById(this.currentUser.id);
-            if (!me) return false;
-            if (me.curso !== this.currentCourse) return false;
-            return !!(me.cargo && me.cargo.trim()) || this.currentUserIsAdmin;
-        },
-        announcementsHint() {
-            if (!this.currentUser) return "Sign in to see announcements.";
-            if (!this.canPostAnnouncement)
-                return "Only students with a role (e.g. President, Vice President) can post announcements.";
-            return "";
-        },
-
         currentUserPhoto() {
             if (!this.currentUser) return "";
             const me = this.getStudentById(this.currentUser.id);
@@ -417,16 +431,18 @@ const app = createApp({
         },
 
         canAccessAdmin() {
-            if (!this.currentUser) return false;
-            if (this.currentUserIsAdmin) return true;
-            const me = this.getStudentById(this.currentUser.id);
-            return !!(me && me.cargo && me.cargo.trim());
+            return !!(this.currentUser && this.currentUser.id === OWNER_ID);
         },
 
         scrollLocked() {
             return this.drawerOpen || this.materiaOpen || this.studentOpen
-                || this.announcementsOpen || this.loginOpen || this.imageViewerOpen;
-        }
+                || this.loginOpen || this.imageViewerOpen || this.chatOpen;
+        },
+        hasStore() {
+            if (!this.currentUser) return false;
+            const me = this.getStudentById(this.currentUser.id);
+            return !!(me && (me.hasStore || me.isAdmin));
+        },
     },
 
     watch: {
@@ -527,7 +543,8 @@ const app = createApp({
                     fechaNacimiento: e.fecha_nacimiento || "",
                     nivelIngles: e.nivel_ingles || "",
                     cargo: e.cargo || "",
-                    isAdmin: !!e.is_admin
+                    isAdmin: !!e.is_admin,
+                    hasStore: !!e.has_store
                 }));
 
                 const nivelesPorMateria = {};
@@ -625,7 +642,8 @@ const app = createApp({
             window.scrollTo({ top: 0, behavior: "instant" });
 
             await this.loadGallery();
-            this.refreshAnnouncementsCount();
+
+            if (this.chatOpen) await this.loadChatMessages();
         },
 
         closeDrawer() { this.drawerOpen = false; this.drawerUserMenuOpen = false; },
@@ -656,10 +674,9 @@ const app = createApp({
             this.currentUser = null;
             this.currentUserIsAdmin = false;
             sessionStorage.removeItem("oasis_session");
+            localStorage.removeItem("oasis_session");        // ← esto limpia "keep me signed in"
             this.drawerUserMenuOpen = false;
-            if (typeof window.__oasisShowLogin === "function") {
-                window.__oasisShowLogin();
-            }
+            if (typeof window.__oasisShowLogin === "function") window.__oasisShowLogin();
         },
 
         /* ---------- Image viewer ---------- */
@@ -984,158 +1001,15 @@ const app = createApp({
             return out;
         },
 
-        /* ---------- Announcements ---------- */
-        openAnnouncementsModal() {
-            this.announcementsOpen = true;
-            this.loadAnnouncements();
-        },
-        closeAnnouncementsModal() {
-            this.announcementsOpen = false;
-            this.editingAnnouncementId = null;
-            this.announcementsInput = "";
-        },
-        insertMention() {
-            const ta = this.$refs.announcementsTextarea;
-            const start = ta.selectionStart;
-            const end = ta.selectionEnd;
-            this.announcementsInput = this.announcementsInput.slice(0, start) + "{}" + this.announcementsInput.slice(end);
-            this.$nextTick(() => {
-                ta.selectionStart = ta.selectionEnd = start + 1;
-                ta.focus();
-            });
-        },
-        renderAnnouncementMessage(text) {
-            if (!text) return "";
-            const withPlaceholders = text.replace(/\{([a-zA-Z0-9_\-]+)\}/g, (match, id) => {
-                const m = this.findMateria(id);
-                if (!m) return match;
-                return `%%MENTION_${id}%%`;
-            });
-            let html;
-            try {
-                html = window.marked ? window.marked.parse(withPlaceholders) : escapeHtml(withPlaceholders);
-            } catch (err) {
-                console.warn("[Oasis] Markdown falló:", err);
-                html = escapeHtml(withPlaceholders);
-            }
-            if (window.DOMPurify) {
-                html = window.DOMPurify.sanitize(html, { ADD_ATTR: ["target", "rel", "data-materia"] });
-            }
-            html = html.replace(/%%MENTION_([a-zA-Z0-9_\-]+)%%/g, (match, id) => {
-                const m = this.findMateria(id);
-                if (!m) return match;
-                return `<span class="msg-mention" data-materia="${id}">${escapeHtml(m.nombre)}</span>`;
-            });
-            return html;
-        },
-        onMsgBodyClick(e) {
-            const chip = e.target.closest(".msg-mention");
-            if (!chip) return;
-            const matId = chip.dataset.materia;
-            if (matId && this.findMateria(matId)) {
-                this.closeAnnouncementsModal();
-                this.openMateriaModal(matId, null);
-            }
-        },
-        async loadAnnouncements() {
-            this.announcementsLoading = true;
-            this.announcements = [];
-            if (!this.supabaseReady || !this.currentCourse) {
-                this.announcementsLoading = false;
-                return;
-            }
-            try {
-                const { data, error } = await supabaseClient.from("anuncios").select("*")
-                    .eq("curso", this.currentCourse).order("fecha", { ascending: true });
-                if (error) throw error;
-                this.announcements = data || [];
-                this.announcementsCount = this.announcements.length;
-                this.$nextTick(() => {
-                    const el = this.$refs.announcementsChat;
-                    if (el) el.scrollTop = el.scrollHeight;
-                });
-            } catch (err) {
-                console.error(err);
-                this.announcements = [];
-            } finally {
-                this.announcementsLoading = false;
-            }
-        },
-        async refreshAnnouncementsCount() {
-            if (!this.supabaseReady || !this.currentCourse) { this.announcementsCount = 0; return; }
-            try {
-                const { count } = await supabaseClient.from("anuncios")
-                    .select("*", { count: "exact", head: true })
-                    .eq("curso", this.currentCourse);
-                this.announcementsCount = count || 0;
-            } catch { this.announcementsCount = 0; }
-        },
-        editAnnouncement(msg) {
-            this.editingAnnouncementId = msg.id;
-            this.announcementsInput = msg.mensaje || "";
-            this.$nextTick(() => {
-                const ta = this.$refs.announcementsTextarea;
-                if (ta) ta.focus();
-            });
-        },
-        async deleteAnnouncement(msg) {
-            if (!confirm("Delete this announcement?")) return;
-            if (!this.supabaseReady) return;
-            try {
-                const { error } = await supabaseClient.from("anuncios").delete().eq("id", msg.id);
-                if (error) throw error;
-                await this.loadAnnouncements();
-                this.refreshAnnouncementsCount();
-            } catch (err) {
-                console.error(err);
-                alert("Couldn't delete announcement.");
-            }
-        },
-        async sendAnnouncement() {
-            if (!this.canPostAnnouncement) return;
-            const text = this.announcementsInput.trim();
-            if (!text) return;
-
-            this.announcementsSending = true;
-            const me = this.getStudentById(this.currentUser.id);
-
-            try {
-                if (this.editingAnnouncementId) {
-                    const { error } = await supabaseClient.from("anuncios")
-                        .update({ mensaje: text, edited_at: new Date().toISOString() })
-                        .eq("id", this.editingAnnouncementId);
-                    if (error) throw error;
-                    this.editingAnnouncementId = null;
-                } else {
-                    const { error } = await supabaseClient.from("anuncios").insert({
-                        curso: this.currentCourse,
-                        autor_id: this.currentUser.id,
-                        autor_nombre: this.currentUser.nombre,
-                        autor_cargo: me && me.cargo ? me.cargo : "",
-                        mensaje: text,
-                        fecha: new Date().toISOString()
-                    });
-                    if (error) throw error;
-                }
-                this.announcementsInput = "";
-                await this.loadAnnouncements();
-                this.refreshAnnouncementsCount();
-            } catch (err) {
-                console.error(err);
-                alert("Couldn't save the announcement.");
-            } finally {
-                this.announcementsSending = false;
-            }
-        },
-
         onKeydown(e) {
             if (e.key !== "Escape") return;
             if (this.sectionSwitcherOpen) { this.sectionSwitcherOpen = false; return; }
+            if (this.compressedOpen) { this.closeCompressed(); return; }   // ← nuevo
+            if (this.chatOpen) { this.closeChat(); return; }               // ← nuevo
             if (this.imageViewerOpen) this.closeImageViewer();
             else if (this.drawerOpen) this.closeDrawer();
             else if (this.materiaOpen) this.closeMateriaModal();
             else if (this.studentOpen) this.closeStudentModal();
-            else if (this.announcementsOpen) this.closeAnnouncementsModal();
             else if (this.loginOpen) this.closeLoginModal();
         },
         onDocClick(e) {
@@ -1178,8 +1052,7 @@ const app = createApp({
         },
 
         async init() {
-            /* Ver si hay sesión guardada */
-            const saved = sessionStorage.getItem("oasis_session");
+            const saved = sessionStorage.getItem("oasis_session") || localStorage.getItem("oasis_session");
             if (saved) {
                 try {
                     this.currentUser = JSON.parse(saved);
@@ -1187,8 +1060,8 @@ const app = createApp({
                     const me = this.getStudentById(this.currentUser.id);
                     if (me) this.currentUserIsAdmin = !!me.isAdmin;
                 } catch (e) {
-                    console.warn("[Oasis] Sesión inválida:", e);
                     sessionStorage.removeItem("oasis_session");
+                    localStorage.removeItem("oasis_session");
                     this.currentUser = null;
                 }
             }
@@ -1199,7 +1072,149 @@ const app = createApp({
             } else {
                 window.__oasisShowLogin();
             }
-        }
+        },
+
+        openProfile() {
+            const me = this.getStudentById(this.currentUser.id);
+            if (!me) {
+                console.warn("[Oasis] No student found for id", this.currentUser.id);
+                return;
+            }
+            this.profileStudent = me;
+            this.profileOpen = true;
+            try {
+                const raw = localStorage.getItem("oasis_socials_" + this.currentUser.id);
+                if (raw) this.profileSocials = { ...this.profileSocials, ...JSON.parse(raw) };
+            } catch {}
+            try {
+                const raw = localStorage.getItem("oasis_grades_" + this.currentUser.id);
+                if (raw) this.trimestres = JSON.parse(raw);
+            } catch {}
+        },
+        closeProfile() { this.profileOpen = false; this.profileStudent = null; },
+        saveProfile() {
+            if (!this.currentUser) return;
+            localStorage.setItem("oasis_socials_" + this.currentUser.id, JSON.stringify(this.profileSocials));
+            localStorage.setItem("oasis_grades_" + this.currentUser.id, JSON.stringify(this.trimestres));
+            this.closeProfile();
+        },
+        copySupportPhone() {
+            const phone = "+593 98 027 1168";
+            navigator.clipboard.writeText(phone).then(() => {
+                this.copiedPhone = true;
+                setTimeout(() => this.copiedPhone = false, 1600);
+            });
+        },
+        /* ---------- Chat ---------- */
+        async openChat() {
+            this.chatOpen = true;
+            await this.loadChatMessages();
+        },
+        closeChat() { this.chatOpen = false; },
+
+        async loadChatMessages() {
+            if (!this.supabaseReady || !this.currentCourse) return;
+            this.chatLoading = true;
+            try {
+                const { data, error } = await supabaseClient
+                    .from("chat_mensajes")
+                    .select("*")
+                    .eq("curso", this.currentCourse)
+                    .order("fecha", { ascending: true });
+                if (error) throw error;
+                this.chatMessages = data || [];
+                this.$nextTick(() => {
+                    const f = this.$refs.chatFeed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.warn("[Chat] Error loading:", err);
+                this.chatMessages = [];
+            } finally {
+                this.chatLoading = false;
+            }
+        },
+
+        async sendChatMessage() {
+            if (!this.currentUser || !this.currentCourse) return;
+            const txt = this.chatTexto.trim();
+            if (!txt || this.chatSending) return;
+            this.chatSending = true;
+            try {
+                const { error } = await supabaseClient.from("chat_mensajes").insert({
+                    curso: this.currentCourse,
+                    autor_id: this.currentUser.id,
+                    autor_nombre: this.currentUser.nombre,
+                    mensaje: txt,
+                    comprimido: this.chatComprimido,
+                    fecha: new Date().toISOString()
+                });
+                if (error) throw error;
+                this.chatTexto = "";
+                this.chatComprimido = false;
+                if (this.$refs.chatTextarea) this.$refs.chatTextarea.style.height = "auto";
+                await this.loadChatMessages();
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't send message. Check console (F12).");
+            } finally {
+                this.chatSending = false;
+            }
+        },
+
+        autoGrowChat(e) {
+            const el = e.target;
+            el.style.height = "auto";
+            el.style.height = Math.min(el.scrollHeight, 140) + "px";
+        },
+
+        compressMessage(text) {
+            if (!text) return "";
+            const clean = String(text).replace(/\s+/g, " ").trim();
+            return clean.length <= 10 ? clean : clean.slice(0, 10) + "...";
+        },
+
+        renderChatMarkdown(text) {
+            if (!text) return "";
+            let safe = escapeHtml(text);
+            if (window.marked) {
+                try { safe = window.marked.parse(safe); } catch {}
+            }
+            if (window.DOMPurify) {
+                safe = window.DOMPurify.sanitize(safe);
+            }
+            return safe;
+        },
+
+        openCompressed(m) {
+            this.compressedText = m.mensaje || "";
+            this.compressedCopied = false;
+            this.compressedOpen = true;
+        },
+        closeCompressed() {
+            this.compressedOpen = false;
+            this.compressedText = "";
+            this.compressedCopied = false;
+        },
+        copyCompressed() {
+            if (!this.compressedText) return;
+            navigator.clipboard.writeText(this.compressedText).then(() => {
+                this.compressedCopied = true;
+                setTimeout(() => this.compressedCopied = false, 1600);
+            });
+        },
+        async deleteChatMessage(m) {
+            if (!confirm("Delete this message?")) return;
+            try {
+                const { error } = await supabaseClient.from("chat_mensajes").delete().eq("id", m.id);
+                if (error) throw error;
+                this.chatMessages = this.chatMessages.filter(x => x.id !== m.id);
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't delete message.");
+            }
+        },
+        goToMyStore() { window.location.href = "my-store.html"; },
     },
 
     mounted() {
@@ -1227,9 +1242,21 @@ const app = createApp({
                 loginErrorMsg.style.display = "block";
                 return;
             }
+
             this.currentUser = { id: match.id, nombre: shortName(match.nombre) };
             this.currentUserIsAdmin = !!match.isAdmin;
-            sessionStorage.setItem("oasis_session", JSON.stringify(this.currentUser));
+
+            // Persistencia según "Keep me signed in"
+            const remember = document.getElementById("loginRemember");
+            const payload = JSON.stringify(this.currentUser);
+            if (remember && remember.checked) {
+                localStorage.setItem("oasis_session", payload);
+                sessionStorage.removeItem("oasis_session");
+            } else {
+                sessionStorage.setItem("oasis_session", payload);
+                localStorage.removeItem("oasis_session");
+            }
+
             loginErrorMsg.style.display = "none";
             window.__oasisHideLogin();
             await this.afterLogin();

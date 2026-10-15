@@ -864,3 +864,175 @@
         display: none !important;
     }
 }
+
+/* ============================================================
+   NEW ADMIN LAYOUT (topbar + tabs + drawer)
+   ============================================================ */
+
+.admin-fixed-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(19, 19, 22, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--outline);
+}
+.admin-fixed-header .fs-topbar {
+    position: static;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none;
+}
+
+/* Tabs pill */
+.admin-tabs {
+    display: flex;
+    justify-content: center;
+    padding: 0 20px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+
+.admin-tabs-track {
+    display: inline-flex;
+    gap: 3px;
+    background: var(--surface-2);
+    border: 1px solid var(--outline);
+    border-radius: var(--radius-full);
+    padding: 4px;
+}
+
+.admin-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-full);
+    color: var(--on-surface-var);
+    font-family: inherit;
+    font-size: 13px;
+    font-variation-settings: "wght" 600;
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+}
+.admin-tab:hover { color: var(--on-surface); }
+.admin-tab.active {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+}
+.admin-tab .material-icons { font-size: 15px; }
+
+@media (max-width: 700px) {
+    .admin-tab { padding: 8px 12px; font-size: 12px; }
+    .admin-tab .material-icons { font-size: 14px; }
+    .admin-tab span:last-child { display: none; }
+}
+
+/* Content */
+.admin-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 24px 100px;
+}
+@media (max-width: 700px) {
+    .admin-content { padding: 20px 14px 80px; }
+}
+
+.admin-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.admin-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--primary);
+    color: var(--on-primary);
+    border: none;
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 13px;
+    font-variation-settings: "wght" 600;
+    cursor: pointer;
+    transition: .2s;
+}
+.admin-add-btn:hover:not(:disabled) {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+}
+.admin-add-btn:disabled { opacity: .4; cursor: not-allowed; }
+.admin-add-btn .material-icons { font-size: 16px; }
+
+.admin-empty-inline {
+    color: var(--on-surface-var);
+    font-size: 13px;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Smaller row heights now that we have more room */
+.admin-row { grid-template-columns: 1fr 120px 80px 40px; }
+.admin-row-wide { grid-template-columns: 80px 1.5fr 100px 1.2fr 100px 130px 40px; }
+
+@media (max-width: 900px) {
+    .admin-row { grid-template-columns: 1fr; }
+    .admin-row-wide { grid-template-columns: 1fr; }
+}
+
+/* Fix: docentes tienen 4 columnas, no 7 */
+.admin-row-wide.admin-row-teacher,
+.admin-row-wide.admin-row-teacher-header {
+    grid-template-columns: 80px 1fr 140px 40px;
+    gap: 12px;
+}
+
+/* El header de wide usa el mismo grid que las filas */
+.admin-row-wide.admin-row-wide-header {
+    grid-template-columns: 80px 1.5fr 100px 1.2fr 100px 130px 40px;
+}
+
+@media (max-width: 900px) {
+    .admin-row-wide.admin-row-teacher,
+    .admin-row-wide.admin-row-teacher-header,
+    .admin-row-wide.admin-row-wide-header {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-row-wide.admin-row-wide-header,
+.admin-row-wide.admin-row-teacher-header {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tx-4);
+}
+
+.admin-row-wide.admin-row-wide-header,
+.admin-row-wide {
+    grid-template-columns: 80px 1.4fr 90px 1.1fr 90px 120px 70px 40px;
+}
+@media (max-width: 900px) {
+    .admin-row-wide { grid-template-columns: 1fr; }
+}
+
+.admin-row-wide {
+    grid-template-columns: 80px 1.4fr 70px 1fr 90px 120px 60px 40px;
+    gap: 6px;
+}
