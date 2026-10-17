@@ -1,0 +1,121 @@
+/* ============================================================
+   IDENTITY SYSTEM · v1.0
+   Paleta, radios, sombras y animaciones compartidas
+   entre todos los proyectos.
+   ============================================================ */
+
+:root {
+    /* ── FONDOS (de más oscuro a más elevado) ── */
+    --bg-0: #000000;
+    --bg-1: #0A0A0E;
+    --bg-2: #101015;
+    --bg-3: #16161C;
+    --bg-4: #1E1E26;
+    --bg-5: #282833;
+
+    /* ── TEXTO ── */
+    --tx-1: #FFFFFF;
+    --tx-2: #ECECF2;
+    --tx-3: #9C9CAA;
+    --tx-4: #64647A;
+    --tx-5: #42424F;
+
+    /* ── ACENTO · LAVANDA ── */
+    --ac-1: #D6CCFF;
+    --ac-2: #C6B8FF;
+    --ac-3: #B0A0F0;
+    --ac-4: #8E7DD4;
+    --ac-text: #131318;
+
+    /* ── ESTADOS ── */
+    --st-success: #8FE3A8;
+    --st-warning: #FFD77A;
+    --st-danger:  #FF8A95;
+    --st-info:    #8AC7FF;
+
+    /* ── LÍNEAS / OUTLINES ── */
+    --ln-1: rgba(255,255,255,0.07);
+    --ln-2: rgba(255,255,255,0.13);
+    --ln-3: rgba(255,255,255,0.20);
+    --ln-ac: rgba(198,184,255,0.35);
+
+    /* ── RADIOS ── */
+    --r-xs: 10px;
+    --r-sm: 14px;
+    --r-md: 18px;
+    --r-lg: 24px;
+    --r-xl: 32px;
+    --r-full: 999px;
+
+    /* ── SOMBRAS ── */
+    --sh-sm: 0 2px 8px rgba(0,0,0,0.25);
+    --sh-md: 0 8px 24px rgba(0,0,0,0.35);
+    --sh-lg: 0 20px 60px rgba(0,0,0,0.50);
+    --sh-glow: 0 0 40px rgba(198,184,255,0.15);
+
+    /* ── TIMING ── */
+    --t-fast: 0.15s;
+    --t-base: 0.25s;
+    --t-slow: 0.40s;
+    --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in:     cubic-bezier(0.40, 0, 0.20, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ══════════════════════════════════════════════════════════
+   ANIMACIONES UNIVERSALES
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes id-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes id-slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes id-scale-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+@keyframes id-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+@keyframes id-pulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%      { opacity: 0.6; transform: scale(1.02); }
+}
+
+@keyframes id-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes id-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+}
+
+@keyframes id-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+}
+
+@keyframes id-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BASE TIPOGRÁFICA
+   ══════════════════════════════════════════════════════════ */
+
+html, body {
+    font-family: 'Varela Round', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oasis · Store</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/identity.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/store.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="data/supabase-config.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+
+<div id="storeApp" class="hidden-app">
+
+    <main class="store-page">
+        <div class="fs-topbar">
+            <div class="store-user" v-if="currentUser" :class="{ open: userMenuOpen }">
+                <button class="store-user-btn" @click.stop="toggleUserMenu">
+                    <img v-if="currentUserPhoto" :src="currentUserPhoto" class="store-user-avatar" alt="">
+                    <div v-else class="store-user-avatar no-photo-fallback">{{ currentUserInitial }}</div>
+                    <span class="store-user-name">{{ currentUser.nombre }}</span>
+                    <svg class="store-user-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="store-user-menu">
+                    <button class="store-user-menu-item" @click="openProfile">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                        Profile
+                    </button>
+                    <button v-if="hasStore" class="store-user-menu-item" @click="goToMyStore">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 8h14l-1.2 12H6.2z"/>
+                            <path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
+                        </svg>
+                        My Store
+                    </button>
+                    <button class="store-user-menu-item danger" @click="signOut">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H9M15 15.5l4-4-4-4M19 11.5H9"/></svg>
+                        Sign out
+                    </button>
+                </div>
+            </div>
+            <div class="fs-section-switcher" :class="{ open: sectionSwitcherOpen }">
+                <button class="fs-section-btn" type="button" @click.stop="sectionSwitcherOpen = !sectionSwitcherOpen">
+                    <span>Store</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="fs-section-menu">
+                    <button v-if="canAccessAdmin" class="fs-section-item" type="button" @click="goToAdmin">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>
+                        <span>Admin panel</span>
+                    </button>
+                    <a class="fs-section-item" href="index.html">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M4 17.5A1.5 1.5 0 0 1 5.5 16H20"/></svg>
+                        <span>Courses</span>
+                    </a>
+                    <a class="fs-section-item" href="secrets.html">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+                        <span>Secrets</span>
+                    </a>
+                    <button class="fs-section-item active" type="button" @click="sectionSwitcherOpen = false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+                        <span>Store</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="store-body">
+            <p v-if="loading" class="store-empty">Loading…</p>
+            <p v-else-if="stores.length === 0" class="store-empty">No stores yet. Be the first!</p>
+
+            <div v-else class="store-grid">
+                <article v-for="s in stores" :key="s.id" class="store-card" @click="openStore(s)">
+                    <div class="store-card-image">
+                        <img v-if="s.card_image" :src="s.card_image" alt="" @error="$event.target.style.display='none'">
+                        <div v-else class="no-photo">No image</div>
+                    </div>
+                    <div class="store-card-body">
+                        <h3 class="store-card-name">{{ s.nombre }}</h3>
+                        <div class="store-card-owner">
+                            <div class="store-card-owner-avatar">
+                                <img v-if="studentFoto(s.owner_id)" :src="studentFoto(s.owner_id)" alt="">
+                                <div v-else class="no-photo"></div>
+                            </div>
+                            <span class="store-card-owner-name">{{ studentName(s.owner_id) }}</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <!-- Modal de detalle -->
+        <div class="store-modal-overlay" :class="{ active: modalOpen }" @click.self="closeStore">
+            <div class="store-modal" v-if="selectedStore">
+                <div class="store-modal-header">
+                    <div class="store-modal-header-info">
+                        <h2 class="store-modal-name">{{ selectedStore.nombre }}</h2>
+                        <div class="store-modal-owner">
+                            <img v-if="studentFoto(selectedStore.owner_id)" :src="studentFoto(selectedStore.owner_id)" alt="">
+                            <span>{{ studentName(selectedStore.owner_id) }}</span>
+                        </div>
+                    </div>
+                    <button class="store-modal-close" @click="closeStore">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+                <div class="store-modal-body">
+                    <p v-if="selectedStore.descripcion" class="store-modal-description">{{ selectedStore.descripcion }}</p>
+
+                    <p class="store-modal-gallery-title">Photos</p>
+                    <div v-if="storePhotos.length === 0" class="store-modal-empty">No photos yet</div>
+                    <div v-else class="store-modal-gallery">
+                        <img v-for="p in storePhotos" :key="p.id" :src="p.url" alt="" @click="openImageViewer(p.url)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image viewer -->
+        <div class="image-viewer" :class="{ active: imageViewerOpen }" @click.self="closeImageViewer">
+            <button class="image-viewer-close" @click="closeImageViewer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <img :src="imageViewerSrc" alt="">
+        </div>
+
+        <!-- Profile modal -->
+        <div class="profile-overlay" :class="{ active: profileOpen }" @click.self="closeProfile">
+            <div class="profile-modal" v-if="profileStudent">
+                <div class="profile-head">
+                    <div class="profile-avatar">
+                        <img v-if="profileStudent.foto" :src="profileStudent.foto" alt="">
+                        <div v-else class="no-photo"></div>
+                    </div>
+                    <div class="profile-head-info">
+                        <h2 class="profile-name">{{ profileStudent.nombre }}</h2>
+                        <p class="profile-course">{{ profileStudent.curso }}</p>
+                    </div>
+                    <button class="profile-close" @click="closeProfile" aria-label="Close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+                <div class="profile-body">
+                    <p class="profile-section-title">Social</p>
+                    <div class="profile-socials">
+                        <div class="profile-social-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+                            <input type="text" v-model="profileSocials.instagram" placeholder="Instagram">
+                        </div>
+                        <div class="profile-social-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3.5a5 5 0 0 1-4 4.5v3h3a1 1 0 0 1 0 2h-3v6a1 1 0 0 1-2 0v-6H7a1 1 0 0 1 0-2h3v-3a1 1 0 0 1 1-1 3 3 0 0 0 3-3.5Z"/></svg>
+                            <input type="text" v-model="profileSocials.tiktok" placeholder="TikTok">
+                        </div>
+                        <div class="profile-social-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.5 8.5 0 1 1-3.5-6.8L21 4l-1.5 3.5A8.5 8.5 0 0 1 21 11.5Z"/><path d="M8 10h.01M16 10h.01M9 14c1 1 5 1 6 0"/></svg>
+                            <input type="text" v-model="profileSocials.whatsapp" placeholder="WhatsApp">
+                        </div>
+                        <div class="profile-social-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M7 15c2-1 3-2 3-3M14 6c1.5.5 3 2 4 4M6 10c1-2 3-3 5-4"/></svg>
+                            <input type="text" v-model="profileSocials.spotify" placeholder="Spotify">
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button class="profile-btn" @click="closeProfile">Cancel</button>
+                    <button class="profile-btn primary" @click="saveProfile">Save</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="login-screen" id="loginScreen">
+    <div class="login-sheet">
+        <div class="login-form-wrap">
+            <h2 class="login-form-title">Sign In</h2>
+            <div class="login-field">
+                <label class="login-field-label" for="loginUserInput">USERNAME</label>
+                <input type="text" id="loginUserInput" class="login-field-input" placeholder="yourname" autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label class="login-field-label" for="loginPassInput">PASSWORD</label>
+                <div class="login-field-password">
+                    <input type="password" id="loginPassInput" class="login-field-input" placeholder="••••••" autocomplete="current-password">
+                    <button type="button" class="login-field-eye" data-target="loginPassInput">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.4 4.3"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                    </button>
+                </div>
+                <label class="login-remember"><input type="checkbox" id="loginRemember"><span>Keep me signed in</span></label>
+            </div>
+            <p class="login-error-msg" id="loginErrorMsg" style="display:none;">Wrong username or password</p>
+            <button class="login-btn" id="loginSubmitBtn" type="button">Sign In</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/shared/config.js"></script>
+<script src="js/shared/utils.js"></script>
+<script src="js/shared/auth.js"></script>
+<script src="js/shared/data.js"></script>
+<script src="js/shared/ui.js"></script>
+<script src="js/components/PhotoSlot.js"></script>
+<script src="js/store.js?v=1"></script>
+</body>
+</html>

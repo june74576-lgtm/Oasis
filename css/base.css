@@ -1,0 +1,82 @@
+/* ============================================================
+   Oasis · Base
+   ------------------------------------------------------------
+   Tokens del tema Oasis + reset + tipografía + botones + forms
+   genéricos. Se carga en todas las páginas.
+   ============================================================ */
+
+/* ===== Tokens ===== */
+:root{
+    --bg:#131316;
+    --surface:#1c1b1f;
+    --surface-1:#211f26;
+    --surface-2:#26232c;
+    --surface-3:#2b2831;
+    --outline:rgba(255,255,255,.12);
+    --on-surface:#e6e1e9;
+    --on-surface-var:#9992a3;
+    --primary:#c6b8ff;
+    --on-primary:#2e1a69;
+    --primary-container:#4b3b90;
+    --on-primary-container:#e4ddff;
+    --tertiary:#f0b7d0;
+    --on-tertiary:#4a1230;
+    --tertiary-container:#66375b;
+    --danger:#ff5a5a;
+    --radius-xl:32px;
+    --radius-lg:20px;
+    --radius-full:999px;
+}
+
+/* ===== Reset ===== */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body{
+    background:var(--bg);
+    color:var(--on-surface);
+    font-family:'Varela Round', system-ui, sans-serif;
+    min-height:100vh;
+}
+
+a{ color:inherit; }
+button{ font-family:inherit; }
+
+/* ===== Utilidades ===== */
+
+/* Todos los roots de las apps arrancan ocultos hasta que el JS
+   decide si mostrar login o la app. Cubre los 5 IDs. */
+#app.hidden-app,
+#adminApp.hidden-app,
+#secretsApp.hidden-app,
+#storeApp.hidden-app,
+#myStoreApp.hidden-app{
+    display: none !important;
+}
+
+/* ===== Botones ===== */
+
+.btn-filled{
+    background:var(--primary); color:var(--on-primary);
+    border:none; border-radius:var(--radius-full);
+    padding:12px 24px; font-family:inherit; font-size:14px;
+    font-variation-settings:"wght" 600; cursor:pointer; transition:.25s;
+}
+.btn-filled:hover{ background:var(--primary-container); color:var(--on-primary-container); }
+.btn-filled.small{ padding:8px 16px; font-size:12px; }
+
+/* ===== Hide page scrollbar ===== */
+html, body {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* Edge legacy */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
