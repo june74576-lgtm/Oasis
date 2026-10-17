@@ -386,7 +386,7 @@
                 </div>
                 <button class="admin-add-btn" @click="openAddGalleryPhoto"
                         :disabled="!selectedCourse">
-                    <span class="material-icons">add_photo_alternate</span> Add photo
+                    <span class="material-icons">add_photo_alternate</span> Add curated photo
                 </button>
             </div>
 
@@ -394,25 +394,45 @@
                 Select a course in the drawer.
             </div>
 
-            <div v-else-if="galeriaDelCurso.length === 0" class="admin-empty">
-                No photos yet.
-            </div>
-
-            <div v-else class="admin-gallery-list">
-                <div v-for="g in galeriaDelCurso" :key="g.id" class="admin-gallery-item">
-                    <img :src="g.ruta" :alt="''" @error="$event.target.style.opacity = 0.2">
-                    <div class="admin-gallery-info">
-                        <input class="admin-input" v-model="g.ruta"
-                               :disabled="!canEditThisCourse(g.curso)" @change="saveGaleriaFoto(g)">
-                        <input type="number" class="admin-input small" v-model.number="g.orden"
-                               :disabled="!canEditThisCourse(g.curso)" @change="saveGaleriaFoto(g)">
-                    </div>
-                    <button class="admin-save-btn danger" @click="deleteGaleriaFoto(g)"
-                            :disabled="!canEditThisCourse(g.curso)" title="Delete">
-                        <span class="material-icons">delete</span>
-                    </button>
+            <template v-else>
+                <!-- Curadas -->
+                <h3 class="admin-subsection-title">Curated</h3>
+                <div v-if="galeriaDelCurso.length === 0" class="admin-empty">
+                    No curated photos yet.
                 </div>
-            </div>
+                <div v-else class="admin-gallery-list">
+                    <div v-for="g in galeriaDelCurso" :key="g.id" class="admin-gallery-item">
+                        <img :src="g.ruta" :alt="''" @error="$event.target.style.opacity = 0.2">
+                        <div class="admin-gallery-info">
+                            <input class="admin-input" v-model="g.ruta"
+                                :disabled="!canEditThisCourse(g.curso)" @change="saveGaleriaFoto(g)">
+                            <input type="number" class="admin-input small" v-model.number="g.orden"
+                                :disabled="!canEditThisCourse(g.curso)" @change="saveGaleriaFoto(g)">
+                        </div>
+                        <button class="admin-save-btn danger" @click="deleteGaleriaFoto(g)"
+                                :disabled="!canEditThisCourse(g.curso)" title="Delete">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Subidas por estudiantes -->
+                <h3 class="admin-subsection-title">Uploaded by students</h3>
+                <div v-if="galeriaFotosDelCurso.length === 0" class="admin-empty">
+                    No uploaded photos yet.
+                </div>
+                <div v-else class="admin-gallery-list">
+                    <div v-for="g in galeriaFotosDelCurso" :key="g.id" class="admin-gallery-item">
+                        <img :src="g.url" :alt="''" @error="$event.target.style.opacity = 0.2">
+                        <div class="admin-gallery-info">
+                            <span class="admin-upload-meta">By {{ g.subidoPorNombre || 'Unknown' }}</span>
+                        </div>
+                        <button class="admin-save-btn danger" @click="deleteGaleriaFotoUpload(g)" title="Delete">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
         </section>
 
     </main>
@@ -426,6 +446,10 @@
 
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
+    <div class="login-side" aria-hidden="true">
+        <img src="reze.png" alt="" class="login-reze">
+        <p class="login-reze-text" id="loginRezeText"></p>
+    </div>
     <div class="login-sheet">
         <div class="login-form-wrap">
             <h2 class="login-form-title">Admin Access</h2>
@@ -459,6 +483,18 @@
             <p class="login-error-msg" id="loginErrorMsg" style="display:none;">Wrong username or password</p>
             <button class="login-btn" id="loginSubmitBtn" type="button">Sign In</button>
         </div>
+    </div>
+    <div class="login-music">
+        <audio id="loginMusic" loop preload="auto">
+            <source src="in-the-pool.mp3" type="audio/mpeg">
+        </audio>
+        <button class="login-music-btn" id="loginMusicBtn" type="button" aria-label="Toggle music">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+            </svg>
+        </button>
     </div>
 </div>
 

@@ -89,11 +89,26 @@ window.Oasis = window.Oasis || {};
             errorMsg.style.display = "none";
             errorMsg.textContent = "Wrong username or password";
             setTimeout(() => userInput.focus(), 100);
+
+            const audio = document.getElementById("loginMusic");
+            if (audio) {
+                audio.play().then(() => {
+                    const btn = document.getElementById("loginMusicBtn");
+                    if (btn) btn.classList.add("playing");
+                }).catch(() => {});
+            }
         }
 
         function hide() {
             loginScreen.classList.add("hidden");
             rootEl.classList.remove("hidden-app");
+
+            const audio = document.getElementById("loginMusic");
+            if (audio) {
+                audio.pause();
+                const btn = document.getElementById("loginMusicBtn");
+                if (btn) btn.classList.remove("playing");
+            }
         }
 
         return {

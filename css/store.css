@@ -523,6 +523,45 @@
 .store-user-menu-item.danger:hover svg { color: #ff8a8a; }
 
 @media (max-width: 480px) {
-    .store-user-btn { padding: 4px 10px 4px 4px; max-width: 150px; }
-    .store-user-name { font-size: 12px; }
+    .store-user-btn {
+        padding: 4px 10px 4px 4px;
+        max-width: 160px;
+        min-width: 0;
+    }
+    .store-user-name {
+        font-size: 12px;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
 }
+
+/* ===== My Store modal ===== */
+.my-store-modal {
+    max-width: 520px;
+    text-align: left;
+    padding: 32px 28px 28px;
+}
+.my-store-modal h3 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.my-store-loading {
+    text-align: center;
+    color: var(--on-surface-var);
+    font-style: italic;
+    padding: 40px 0;
+}
+.my-store-modal .store-edit-section { margin-bottom: 18px; }
+.my-store-modal .store-edit-textarea { min-height: 80px; }
+.my-store-modal .store-photos-grid { grid-template-columns: repeat(3, 1fr); }
+.my-store-modal .store-actions {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--outline);
+}
+
+@media (max-width: 560px) {
+    .my-store-modal { padding: 26px 20px 22px; }
+    .my-store-modal .store-photos-grid { grid-template-columns: repeat(2, 1fr); }
+}
+

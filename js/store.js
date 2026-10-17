@@ -3,13 +3,19 @@
    ============================================================ */
 
 const { createApp } = Vue;
-const { utils, auth, data } = window.Oasis;
+const { utils, auth, data, components } = window.Oasis;
 const sb = window.supabaseClient;
 
 const storeRoot = document.getElementById("storeApp");
 const loginCtrl = auth.createLoginController(storeRoot);
 
 createApp({
+
+    components: {
+        ProfileModal: components.ProfileModal,
+        MyStoreModal: components.MyStoreModal
+    },
+
     data() {
         return {
             currentUser: null,
@@ -26,7 +32,8 @@ createApp({
             userMenuOpen: false,
             profileOpen: false,
             profileStudent: null,
-            profileSocials: { instagram: "", tiktok: "", whatsapp: "", spotify: "" }
+            profileEditable: false,
+            myStoreOpen: false,
         };
     },
     computed: {
@@ -62,7 +69,6 @@ createApp({
             return s ? utils.shortName(s.nombre) : "Unknown";
         },
         goToAdmin() { window.location.href = "admin.html"; },
-        goToMyStore() { window.location.href = "my-store.html"; },
         openImageViewer(src) { this.imageViewerSrc = src; this.imageViewerOpen = true; },
         closeImageViewer() { this.imageViewerOpen = false; this.imageViewerSrc = ""; },
 
@@ -70,29 +76,33 @@ createApp({
             this.userMenuOpen = !this.userMenuOpen;
             this.sectionSwitcherOpen = false;
         },
-
-        openProfile() {
+        openProfile(studentId = null, editable = false) {
             if (!this.currentUser) return;
-            const me = this.estudiantes.find(e => e.id === this.currentUser.id);
-            if (!me) return;
-            this.profileStudent = {
-                id: me.id,
-                nombre: me.nombre,
-                foto: me.foto,
-                curso: me.curso || ""
-            };
+            const targetId = studentId || this.currentUser.id;
+            const target = this.estudiantes.find(e => e.id === targetId);
+            if (!target) return;
+            this.profileStudent = target;
+            this.profileEditable = editable && target.id === this.currentUser.id;
             this.profileOpen = true;
-            this.userMenuOpen = false;
-            try {
-                const raw = localStorage.getItem("oasis_socials_" + this.currentUser.id);
-                if (raw) this.profileSocials = { ...this.profileSocials, ...JSON.parse(raw) };
-            } catch {}
         },
-        closeProfile() { this.profileOpen = false; this.profileStudent = null; },
-        saveProfile() {
-            if (!this.currentUser) return;
-            localStorage.setItem("oasis_socials_" + this.currentUser.id, JSON.stringify(this.profileSocials));
-            this.closeProfile();
+        closeProfile() {
+            this.profileOpen = false;
+            this.profileStudent = null;
+            this.profileEditable = false;
+        },
+        onProfileSaved(payload) {
+            if (!this.profileStudent) return;
+            if (payload.foto) {
+                this.profileStudent.foto = payload.foto;
+                // Refrescar en la lista global
+                const idx = this.estudiantes.findIndex(e => e.id === this.profileStudent.id);
+                if (idx !== -1) this.estudiantes[idx].foto = payload.foto;
+            }
+            if (payload.socials) {
+                Object.assign(this.profileStudent, payload.socials);
+                const idx = this.estudiantes.findIndex(e => e.id === this.profileStudent.id);
+                if (idx !== -1) Object.assign(this.estudiantes[idx], payload.socials);
+            }
         },
 
         signOut() { auth.signOut(); },

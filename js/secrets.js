@@ -3,7 +3,7 @@
    ============================================================ */
 
 const { createApp } = Vue;
-const { utils, auth, data } = window.Oasis;
+const { utils, auth, data, config, components } = window.Oasis;
 const sb = window.supabaseClient;
 
 const secretsRoot = document.getElementById("secretsApp");
@@ -18,6 +18,9 @@ const ANON_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
 );
 
 createApp({
+
+    components: { ProfileModal: components.ProfileModal, MyStoreModal: components.MyStoreModal },
+
     data() {
         return {
             currentUser: null,
@@ -31,8 +34,18 @@ createApp({
             userMenuOpen: false,
             profileOpen: false,
             profileStudent: null,
-            profileSocials: { instagram: "", tiktok: "", whatsapp: "", spotify: "" },
-            sectionSwitcherOpen: false
+            profileEditable: false,
+            myStoreOpen: false,
+            sectionSwitcherOpen: false,
+            replyTo: null,
+            contextMenu: { open: false, x: 0, y: 0, message: null },
+            threadOpen: false,
+            threadRoot: null,
+            threadMessages: [],
+            threadTexto: "",
+            threadReplyTo: null,
+            threadSending: false,
+            _threadParents: [],
         };
     },
     computed: {
@@ -74,7 +87,12 @@ createApp({
             if (!this.currentUser) return false;
             const me = this.estudiantes.find(e => e.id === this.currentUser.id);
             return !!(me && me.hasStore);
-        }
+        },
+        isSuperAdmin() {
+            if (!this.currentUser) return false;
+            const me = this.estudiantes.find(e => e.id === this.currentUser.id);
+            return !!(me && (me.isAdmin || me.id === config.OWNER_ID));
+        },
     },
     methods: {
         studentFoto(id) {
@@ -94,6 +112,7 @@ createApp({
         },
         canDelete(m) {
             if (!this.currentUser) return false;
+            if (this.isSuperAdmin) return true;
             return m.autorId === this.currentUser.id;
         },
         async deleteMsg(m) {
@@ -113,17 +132,26 @@ createApp({
             el.style.height = Math.min(el.scrollHeight, 180) + "px";
         },
         async loadData() {
-            const [estudiantes, msgs] = await Promise.all([
-                data.loadEstudiantes(sb),
-                data.loadSecrets(sb)
-            ]);
-            this.estudiantes = estudiantes;
-            this.messages = msgs;              // ya viene camelCase del mapper
-            this.$nextTick(() => {
-                const f = this.$refs.feed;
-                if (f) f.scrollTop = f.scrollHeight;
-            });
-            this.loading = false;
+            try {
+                const [estudiantes, all] = await Promise.all([
+                    data.loadEstudiantes(sb),
+                    data.loadSecrets(sb)
+                ]);
+                this.estudiantes = estudiantes;
+                this.messages = all.filter(m => !m.parentId);
+                this._threadParents = [...new Set(all.filter(m => m.parentId).map(m => m.parentId))];
+                this.$nextTick(() => {
+                    const f = this.$refs.feed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.error("[Secrets] Error loading:", err);
+                this.estudiantes = [];
+                this.messages = [];
+                this._threadParents = [];
+            } finally {
+                this.loading = false;
+            }
         },
         async send() {
             const txt = this.texto.trim();
@@ -137,6 +165,7 @@ createApp({
                         autor_nombre: this.currentUser.nombre,
                         anonimo: this.anonimo,
                         mensaje: txt,
+                        reply_to_id: this.replyTo ? this.replyTo.id : null,
                         fecha: new Date().toISOString()
                     })
                     .select()
@@ -150,6 +179,7 @@ createApp({
 
                 this.texto = "";
                 this.anonimo = false;
+                this.replyTo = null;
                 if (this.$refs.ta) this.$refs.ta.style.height = "auto";
 
                 this.$nextTick(() => {
@@ -179,20 +209,32 @@ createApp({
             loginCtrl.hide();
         },
         goToAdmin() { window.location.href = "admin.html"; },
-        goToMyStore() { window.location.href = "my-store.html"; },
-        openProfile() {
-            this.profileStudent = this.estudiantes.find(e => e.id === this.currentUser.id) || null;
-            this.profileOpen = true;
-            try {
-                const raw = localStorage.getItem("oasis_socials_" + this.currentUser.id);
-                if (raw) this.profileSocials = { ...this.profileSocials, ...JSON.parse(raw) };
-            } catch {}
-        },
-        closeProfile() { this.profileOpen = false; this.profileStudent = null; },
-        saveProfile() {
+        openProfile(studentId = null, editable = false) {
             if (!this.currentUser) return;
-            localStorage.setItem("oasis_socials_" + this.currentUser.id, JSON.stringify(this.profileSocials));
-            this.closeProfile();
+            const targetId = studentId || this.currentUser.id;
+            const target = this.estudiantes.find(e => e.id === targetId);
+            if (!target) return;
+            this.profileStudent = target;
+            this.profileEditable = editable && target.id === this.currentUser.id;
+            this.profileOpen = true;
+        },
+        closeProfile() {
+            this.profileOpen = false;
+            this.profileStudent = null;
+            this.profileEditable = false;
+        },
+        onProfileSaved(payload) {
+            if (!this.profileStudent) return;
+            if (payload.foto) {
+                this.profileStudent.foto = payload.foto;
+                const idx = this.estudiantes.findIndex(e => e.id === this.profileStudent.id);
+                if (idx !== -1) this.estudiantes[idx].foto = payload.foto;
+            }
+            if (payload.socials) {
+                Object.assign(this.profileStudent, payload.socials);
+                const idx = this.estudiantes.findIndex(e => e.id === this.profileStudent.id);
+                if (idx !== -1) Object.assign(this.estudiantes[idx], payload.socials);
+            }
         },
         toggleSwitcher() {
             this.sectionSwitcherOpen = !this.sectionSwitcherOpen;
@@ -201,6 +243,115 @@ createApp({
         toggleUserMenu() {
             this.userMenuOpen = !this.userMenuOpen;
             this.sectionSwitcherOpen = false;
+        },
+        /* ---------- Context menu + Reply ---------- */
+        openContextMenu(e, m) {
+            if (e) e.preventDefault();
+            if (e) e.stopPropagation();
+            const x = Math.min((e && e.clientX) || 0, window.innerWidth  - 200);
+            const y = Math.min((e && e.clientY) || 0, window.innerHeight - 160);
+            this.contextMenu = { open: true, x, y, message: m };
+        },
+        closeContextMenu() {
+            this.contextMenu.open = false;
+        },
+        startReply(m) {
+            this.replyTo = m;
+            this.closeContextMenu();
+            this.$nextTick(() => {
+                if (this.$refs.ta) this.$refs.ta.focus();
+            });
+        },
+        cancelReply() {
+            this.replyTo = null;
+        },
+        findMessageById(id) {
+            return this.messages.find(x => x.id === id) || null;
+        },
+        /* ---------- Threads ---------- */
+        hasThreadForMessage(m) {
+            if (!m) return false;
+            return this._threadParents.includes(m.id);
+        },
+        openThread(m) {
+            this.threadRoot = m;
+            this.threadMessages = [];
+            this.threadTexto = "";
+            this.threadReplyTo = null;
+            this.threadOpen = true;
+            this.closeContextMenu();
+            this.loadThreadMessages();
+        },
+        closeThread() {
+            this.threadOpen = false;
+            this.threadRoot = null;
+            this.threadMessages = [];
+            this.threadTexto = "";
+            this.threadReplyTo = null;
+        },
+        async loadThreadMessages() {
+            if (!this.supabaseReady || !this.threadRoot) return;
+            try {
+                const { data: rows, error } = await sb.from("secrets")
+                    .select("*")
+                    .eq("parent_id", this.threadRoot.id)
+                    .order("fecha", { ascending: true });
+                if (error) throw error;
+                this.threadMessages = (rows || []).map(data.mapSecret);
+                this.$nextTick(() => {
+                    const f = this.$refs.threadFeed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.error("[Thread] Error:", err);
+                this.threadMessages = [];
+            }
+        },
+        startThreadReply(m) {
+            this.threadReplyTo = m;
+        },
+        cancelThreadReply() {
+            this.threadReplyTo = null;
+        },
+        findThreadMessageById(id) {
+            return this.threadMessages.find(x => x.id === id) || null;
+        },
+        async sendThreadMessage() {
+            if (!this.threadRoot || !this.currentUser) return;
+            const txt = this.threadTexto.trim();
+            if (!txt || this.threadSending) return;
+            this.threadSending = true;
+            try {
+                const { data: inserted, error } = await sb.from("secrets")
+                    .insert({
+                        autor_id:     this.currentUser.id,
+                        autor_nombre: this.currentUser.nombre,
+                        anonimo:      false,
+                        mensaje:      txt,
+                        parent_id:    this.threadRoot.id,
+                        reply_to_id:  this.threadReplyTo ? this.threadReplyTo.id : null,
+                        fecha:        new Date().toISOString()
+                    }).select().single();
+                if (error) throw error;
+                const uiMsg = data.mapSecret(inserted);
+                if (!this.threadMessages.some(x => x.id === uiMsg.id)) {
+                    this.threadMessages.push(uiMsg);
+                }
+                if (!this._threadParents.includes(this.threadRoot.id)) {
+                    this._threadParents.push(this.threadRoot.id);
+                }
+                this.threadTexto = "";
+                this.threadReplyTo = null;
+                this.$nextTick(() => {
+                    const f = this.$refs.threadFeed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't send thread message");
+            } finally {
+                this.threadSending = false;
+            }
         },
         /* ---------- Realtime secrets ---------- */
         subscribeSecrets() {
@@ -213,6 +364,21 @@ createApp({
                     { event: "INSERT", schema: "public", table: "secrets" },
                     (payload) => {
                         const m = data.mapSecret(payload.new);
+                        if (m.parentId) {
+                            if (!this._threadParents.includes(m.parentId)) {
+                                this._threadParents.push(m.parentId);
+                            }
+                            if (this.threadOpen && this.threadRoot && m.parentId === this.threadRoot.id) {
+                                if (!this.threadMessages.some(x => x.id === m.id)) {
+                                    this.threadMessages.push(m);
+                                    this.$nextTick(() => {
+                                        const f = this.$refs.threadFeed;
+                                        if (f) f.scrollTop = f.scrollHeight;
+                                    });
+                                }
+                            }
+                            return;
+                        }
                         if (this.messages.some(x => x.id === m.id)) return;
                         this.messages.push(m);
                         this.$nextTick(() => {
@@ -244,8 +410,57 @@ createApp({
                 this._channel = null;
             }
         },
+        onAuthorClick(m) {
+            if (m.anonimo) {
+                this.showToast("Sent as Anonymous");
+                return;
+            }
+            this.openProfile(m.autorId);
+        },
+        showToast(msg) {
+            let el = document.getElementById("oasis-toast");
+            if (!el) {
+                el = document.createElement("div");
+                el.id = "oasis-toast";
+                el.className = "oasis-toast";
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+            el.classList.add("show");
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+        },
+        async resetSecrets() {
+            if (!confirm("Delete ALL secrets? This cannot be undone.")) return;
+            try {
+                const { error } = await sb.from("secrets").delete().gt("id", 0);
+                if (error) throw error;
+                this.messages = [];
+                this._threadParents = [];
+                this.showToast("All secrets deleted");
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't reset");
+            }
+        },
+        async deleteThreadMessage(m) {
+            if (!confirm("Delete this message?")) return;
+            try {
+                const { error } = await sb.from("secrets").delete().eq("id", m.id);
+                if (error) throw error;
+                this.threadMessages = this.threadMessages.filter(x => x.id !== m.id);
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't delete message.");
+            }
+        },
     },
     mounted() {
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.threadOpen) {
+                this.closeThread();
+            }
+        });
         this.init();
 
         loginCtrl.elements.submitBtn.addEventListener("click", async () => {
@@ -275,6 +490,9 @@ createApp({
             if (e.key === "Enter") loginCtrl.elements.submitBtn.click();
         });
         document.addEventListener("click", (e) => {
+            if (this.contextMenu.open && !e.target.closest(".context-menu")) {
+                this.contextMenu.open = false;
+            }
             if (this.sectionSwitcherOpen && !e.target.closest(".fs-section-switcher")) {
                 this.sectionSwitcherOpen = false;
             }

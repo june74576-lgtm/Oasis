@@ -1,11 +1,5 @@
 /* ============================================================
    Oasis · Shared UI bootstrap
-   ------------------------------------------------------------
-   Comportamientos comunes a todas las páginas que antes estaban
-   duplicados como <script> inline en cada HTML:
-   - Password eye toggle
-   - GIF loader para el fondo del login
-   Se auto-ejecuta cuando el DOM está listo.
    ============================================================ */
 
 window.Oasis = window.Oasis || {};
@@ -27,38 +21,80 @@ window.Oasis = window.Oasis || {};
         });
     }
 
-    /* ---------- Login background GIF ---------- */
+    /* ---------- Reze floating text ---------- */
 
-    const GIFS = [
-        "https://i.pinimg.com/originals/a2/15/16/a2151608a083bbfa3e5c8976112ec7c2.gif",
-        "https://i.pinimg.com/originals/2d/e6/a0/2de6a0ff8360a7c6da4323c3d0a1bf9b.gif",
-        "https://i.pinimg.com/originals/e4/c3/5f/e4c35f7646d0d7336a3e4cb50edf5c5c.gif",
-        "https://i.redd.it/h8cnhm4y6waf1.gif",
-        "https://i.pinimg.com/originals/e7/99/84/e79984d122840f899033d13b9ad31404.gif"
+    // Escribí acá los textos que quieras. Se muestran en orden aleatorio
+    // debajo de reze.png en la pantalla de login.
+    const REZE_TEXTS = [
+        "Me cae mal Moyano",
+        "Fun fact: no c programar",
+        "No confiesen cosas mias, advertidos estan",
+        "Vendo chupetes ^^",
+        "Sylphie >>>>> Roxy"
     ];
 
-    function loadLoginGif() {
-        const shuffled = [...GIFS].sort(() => Math.random() - 0.5);
-        function tryLoad(i) {
-            if (i >= shuffled.length) return;
-            const img = new Image();
-            img.onload = () => {
-                document.documentElement.style.setProperty(
-                    "--login-bg",
-                    `url("${shuffled[i]}")`
-                );
-            };
-            img.onerror = () => tryLoad(i + 1);
-            img.src = shuffled[i];
-        }
-        tryLoad(0);
+    let _rezeInterval = null;
+
+    function rotateRezeText() {
+        const el = document.getElementById("loginRezeText");
+        if (!el) return;
+        el.style.opacity = "0";
+        setTimeout(() => {
+            el.textContent = REZE_TEXTS[Math.floor(Math.random() * REZE_TEXTS.length)];
+            el.style.opacity = "1";
+        }, 200);
+    }
+
+    function startRezeTextRotation() {
+        rotateRezeText();
+        if (_rezeInterval) clearInterval(_rezeInterval);
+        _rezeInterval = setInterval(rotateRezeText, 5000);
+    }
+
+    /* ---------- Login music ---------- */
+
+    function setupLoginMusic() {
+        const audio = document.getElementById("loginMusic");
+        const btn = document.getElementById("loginMusicBtn");
+        if (!audio || !btn) return;
+
+        // Intenta autoplay. Si el navegador lo bloquea, espera el primer click.
+        const tryPlay = () => {
+            audio.play().then(() => {
+                btn.classList.add("playing");
+            }).catch(() => {
+                const startOnInteract = () => {
+                    audio.play().then(() => btn.classList.add("playing")).catch(() => {});
+                    document.removeEventListener("click", startOnInteract);
+                    document.removeEventListener("keydown", startOnInteract);
+                };
+                document.addEventListener("click", startOnInteract, { once: true });
+                document.addEventListener("keydown", startOnInteract, { once: true });
+            });
+        };
+        tryPlay();
+
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (audio.paused) {
+                audio.play().then(() => btn.classList.add("playing")).catch(() => {});
+            } else {
+                audio.pause();
+                btn.classList.remove("playing");
+            }
+        });
+
+        audio.addEventListener("error", () => {
+            btn.style.display = "none";
+        });
     }
 
     /* ---------- Bootstrap ---------- */
 
     function bootstrapLoginScreen() {
         setupPasswordToggles();
-        loadLoginGif();
+        startRezeTextRotation();
+        setupLoginMusic();
     }
 
     if (document.readyState === "loading") {
@@ -67,11 +103,10 @@ window.Oasis = window.Oasis || {};
         bootstrapLoginScreen();
     }
 
-    /* ---------- Exponer ---------- */
-
     window.Oasis.ui = Object.freeze({
         setupPasswordToggles,
-        loadLoginGif,
+        startRezeTextRotation,
+        setupLoginMusic,
         bootstrapLoginScreen
     });
 

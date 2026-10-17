@@ -58,7 +58,11 @@ window.Oasis = window.Oasis || {};
             nivelIngles:     row.nivel_ingles || "",
             cargo:           row.cargo || "",
             isAdmin:         !!row.is_admin,
-            hasStore:        !!row.has_store
+            hasStore:        !!row.has_store,
+            instagram:       row.instagram || "",
+            tiktok:          row.tiktok || "",
+            whatsapp:        row.whatsapp || "",
+            spotify:         row.spotify || ""
         };
     }
 
@@ -122,7 +126,13 @@ window.Oasis = window.Oasis || {};
             autorNombre: row.autor_nombre,
             mensaje:     row.mensaje,
             comprimido:  !!row.comprimido,
-            fecha:       row.fecha
+            fecha:       row.fecha,
+            replyToId:   row.reply_to_id || null,
+            parentId:    row.parent_id   || null,
+            fileUrl:     row.file_url    || "",
+            fileName:    row.file_name   || "",
+            fileType:    row.file_type   || "",
+            fileSize:    row.file_size   || 0
         };
     }
 
@@ -133,6 +143,19 @@ window.Oasis = window.Oasis || {};
             autorNombre: row.autor_nombre,
             anonimo:     !!row.anonimo,
             mensaje:     row.mensaje,
+            fecha:       row.fecha,
+            replyToId:   row.reply_to_id || null,
+            parentId:    row.parent_id   || null
+        };
+    }
+
+    function mapProfileFile(sb, row) {
+        return {
+            id:          row.id,
+            estudianteId: row.estudiante_id,
+            nombre:      row.nombre,
+            storagePath: row.storage_path,
+            url:         fileUrl(sb, row.storage_path),
             fecha:       row.fecha
         };
     }
@@ -344,6 +367,16 @@ window.Oasis = window.Oasis || {};
         return data ? mapStore(sb, data) : null;
     }
 
+    async function loadProfileFiles(sb, studentId) {
+        const { data, error } = await sb.from("profile_archivos")
+            .select("*")
+            .eq("estudiante_id", studentId)
+            .order("fecha", { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(row => mapProfileFile(sb, row));
+    }
+
     /* ============================================================
        Exponer
        ============================================================ */
@@ -355,12 +388,14 @@ window.Oasis = window.Oasis || {};
         mapCurso, mapEstudiante, mapProfesor, mapMateria,
         mapHorario, mapArchivo, mapChatMensaje, mapSecret,
         mapGaleriaLocal, mapGaleriaFoto, mapStore, mapStorePhoto,
+        mapProfileFile,
         /* Groupers */
         groupHorariosByCurso, groupNotasByStudent, groupNivelesByMateria,
         /* Loaders */
         loadCoreData, loadEstudiantes,
         loadCourseGalleryFotos, loadCourseChat, loadCourseArchivos,
-        loadSecrets, loadStores, loadStorePhotos, loadUserStore
+        loadSecrets, loadStores, loadStorePhotos, loadUserStore,
+        loadProfileFiles
     });
 
 })();

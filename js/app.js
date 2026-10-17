@@ -26,7 +26,11 @@ const appRoot = document.getElementById("app");
 const loginCtrl = auth.createLoginController(appRoot);
 
 createApp({
-    components: { PhotoSlot: components.PhotoSlot },
+    components: {
+        PhotoSlot: components.PhotoSlot,
+        ProfileModal: components.ProfileModal,
+        MyStoreModal: components.MyStoreModal
+    },
 
     data() {
         return {
@@ -96,12 +100,7 @@ createApp({
             /* Profile modal */
             profileOpen: false,
             profileStudent: null,
-            profileSocials: { instagram: "", tiktok: "", whatsapp: "", spotify: "" },
-            trimestres: [
-                { id: "t1", label: "Trimestre 1", n1: 0, n2: 0, n3: 0 },
-                { id: "t2", label: "Trimestre 2", n1: 0, n2: 0, n3: 0 },
-                { id: "t3", label: "Trimestre 3", n1: 0, n2: 0, n3: 0 }
-            ],
+            profileEditable: false,
             copiedPhone: false,
 
             /* Chat */
@@ -113,7 +112,17 @@ createApp({
             chatComprimido: false,
             compressedOpen: false,
             compressedText: "",
-            compressedCopied: false
+            compressedCopied: false,
+            replyTo: null,
+            contextMenu: { open: false, x: 0, y: 0, message: null },
+            threadOpen: false,
+            threadRoot: null,
+            threadMessages: [],
+            threadTexto: "",
+            threadReplyTo: null,
+            threadSending: false,
+            _threadParents: [],
+            myStoreOpen: false,
         };
     },
 
@@ -373,7 +382,6 @@ createApp({
 
         /* ---------- Admin ---------- */
         goToAdmin() { window.location.href = "admin.html"; },
-        goToMyStore() { window.location.href = "my-store.html"; },
 
         /* ---------- Load data ---------- */
         async loadAllData() {
@@ -731,6 +739,7 @@ createApp({
 
         /* ---------- Keydown / click ---------- */
         onKeydown(e) {
+            if (this.threadOpen) { this.closeThread(); return; }
             if (e.key !== "Escape") return;
             if (this.sectionSwitcherOpen) { this.sectionSwitcherOpen = false; return; }
             if (this.compressedOpen) { this.closeCompressed(); return; }
@@ -742,6 +751,9 @@ createApp({
             else if (this.loginOpen) this.closeLoginModal();
         },
         onDocClick(e) {
+            if (this.contextMenu.open) {
+                this.contextMenu.open = false;
+            }
             if (this.drawerUserMenuOpen && !e.target.closest(".drawer-user")) {
                 this.drawerUserMenuOpen = false;
             }
@@ -800,30 +812,17 @@ createApp({
         },
 
         /* ---------- Profile ---------- */
-        openProfile() {
-            const me = this.getStudentById(this.currentUser.id);
-            if (!me) {
-                console.warn("[Oasis] No student found for id", this.currentUser.id);
-                return;
-            }
-            this.profileStudent = me;
+        openProfile(studentId = null, editable = false) {
+            if (!this.currentUser) return;
+            this.closeDrawer();
+            const targetId = studentId || this.currentUser.id;
+            const target = this.estudiantes.find(e => e.id === targetId);
+            if (!target) return;
+            this.profileStudent = target;
+            this.profileEditable = editable && target.id === this.currentUser.id;
             this.profileOpen = true;
-            try {
-                const raw = localStorage.getItem("oasis_socials_" + this.currentUser.id);
-                if (raw) this.profileSocials = { ...this.profileSocials, ...JSON.parse(raw) };
-            } catch {}
-            try {
-                const raw = localStorage.getItem("oasis_grades_" + this.currentUser.id);
-                if (raw) this.trimestres = JSON.parse(raw);
-            } catch {}
         },
         closeProfile() { this.profileOpen = false; this.profileStudent = null; },
-        saveProfile() {
-            if (!this.currentUser) return;
-            localStorage.setItem("oasis_socials_" + this.currentUser.id, JSON.stringify(this.profileSocials));
-            localStorage.setItem("oasis_grades_" + this.currentUser.id, JSON.stringify(this.trimestres));
-            this.closeProfile();
-        },
         copySupportPhone() {
             const phone = "+593 98 027 1168";
             navigator.clipboard.writeText(phone).then(() => {
@@ -844,8 +843,9 @@ createApp({
             if (!this.supabaseReady || !this.currentCourse) return;
             this.chatLoading = true;
             try {
-                // data.loadCourseChat devuelve camelCase (mapper)
-                this.chatMessages = await data.loadCourseChat(sb, this.currentCourse);
+                const all = await data.loadCourseChat(sb, this.currentCourse);
+                this.chatMessages = all.filter(m => !m.parentId);
+                this._threadParents = [...new Set(all.filter(m => m.parentId).map(m => m.parentId))];
                 this.$nextTick(() => {
                     const f = this.$refs.chatFeed;
                     if (f) f.scrollTop = f.scrollHeight;
@@ -853,6 +853,7 @@ createApp({
             } catch (err) {
                 console.warn("[Chat] Error loading:", err);
                 this.chatMessages = [];
+                this._threadParents = [];
             } finally {
                 this.chatLoading = false;
             }
@@ -871,6 +872,7 @@ createApp({
                         autor_nombre: this.currentUser.nombre,
                         mensaje: txt,
                         comprimido: this.chatComprimido,
+                        reply_to_id: this.replyTo ? this.replyTo.id : null,
                         fecha: new Date().toISOString()
                     })
                     .select()
@@ -884,9 +886,10 @@ createApp({
                     this.chatMessages.push(uiMsg);
                 }
 
+                this.replyTo = null;
                 this.chatTexto = "";
                 this.chatComprimido = false;
-                if (this.$refs.chatTextarea) this.chatTextarea.style.height = "auto";
+                if (this.$refs.chatTextarea) this.$refs.chatTextarea.style.height = "auto";
 
                 this.$nextTick(() => {
                     const f = this.$refs.chatFeed;
@@ -941,7 +944,115 @@ createApp({
                 setTimeout(() => this.compressedCopied = false, 1600);
             });
         },
-
+        /* ---------- Context menu + Reply ---------- */
+        openContextMenu(e, m) {
+            if (e) e.preventDefault();
+            if (e) e.stopPropagation();
+            const x = Math.min((e && e.clientX) || 0, window.innerWidth  - 200);
+            const y = Math.min((e && e.clientY) || 0, window.innerHeight - 160);
+            this.contextMenu = { open: true, x, y, message: m };
+        },
+        closeContextMenu() {
+            this.contextMenu.open = false;
+        },
+        startReply(m) {
+            this.replyTo = m;
+            this.closeContextMenu();
+            this.$nextTick(() => {
+                if (this.$refs.chatTextarea) this.$refs.chatTextarea.focus();
+            });
+        },
+        cancelReply() {
+            this.replyTo = null;
+        },
+        findMessageById(id) {
+            return this.chatMessages.find(x => x.id === id) || null;
+        },
+        /* ---------- Threads ---------- */
+        hasThreadForMessage(m) {
+            if (!m) return false;
+            return this._threadParents.includes(m.id);
+        },
+        openThread(m) {
+            this.threadRoot = m;
+            this.threadMessages = [];
+            this.threadTexto = "";
+            this.threadReplyTo = null;
+            this.threadOpen = true;
+            this.closeContextMenu();
+            this.loadThreadMessages();
+        },
+        closeThread() {
+            this.threadOpen = false;
+            this.threadRoot = null;
+            this.threadMessages = [];
+            this.threadTexto = "";
+            this.threadReplyTo = null;
+        },
+        async loadThreadMessages() {
+            if (!this.supabaseReady || !this.threadRoot) return;
+            try {
+                const { data: rows, error } = await sb.from("chat_mensajes")
+                    .select("*")
+                    .eq("parent_id", this.threadRoot.id)
+                    .order("fecha", { ascending: true });
+                if (error) throw error;
+                this.threadMessages = (rows || []).map(data.mapChatMensaje);
+                this.$nextTick(() => {
+                    const f = this.$refs.threadFeed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.error("[Thread] Error:", err);
+                this.threadMessages = [];
+            }
+        },
+        startThreadReply(m) {
+            this.threadReplyTo = m;
+        },
+        cancelThreadReply() {
+            this.threadReplyTo = null;
+        },
+        findThreadMessageById(id) {
+            return this.threadMessages.find(x => x.id === id) || null;
+        },
+        async sendThreadMessage() {
+            if (!this.threadRoot || !this.currentUser) return;
+            const txt = this.threadTexto.trim();
+            if (!txt || this.threadSending) return;
+            this.threadSending = true;
+            try {
+                const { data: inserted, error } = await sb.from("chat_mensajes")
+                    .insert({
+                        curso:        this.currentCourse,
+                        autor_id:     this.currentUser.id,
+                        autor_nombre: this.currentUser.nombre,
+                        mensaje:      txt,
+                        parent_id:    this.threadRoot.id,
+                        reply_to_id:  this.threadReplyTo ? this.threadReplyTo.id : null,
+                        fecha:        new Date().toISOString()
+                    }).select().single();
+                if (error) throw error;
+                const uiMsg = data.mapChatMensaje(inserted);
+                if (!this.threadMessages.some(x => x.id === uiMsg.id)) {
+                    this.threadMessages.push(uiMsg);
+                }
+                if (!this._threadParents.includes(this.threadRoot.id)) {
+                    this._threadParents.push(this.threadRoot.id);
+                }
+                this.threadTexto = "";
+                this.threadReplyTo = null;
+                this.$nextTick(() => {
+                    const f = this.$refs.threadFeed;
+                    if (f) f.scrollTop = f.scrollHeight;
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't send thread message");
+            } finally {
+                this.threadSending = false;
+            }
+        },
         async deleteChatMessage(m) {
             if (!confirm("Delete this message?")) return;
             try {
@@ -955,7 +1066,27 @@ createApp({
                 alert("Couldn't delete message.");
             }
         },
-
+        openMyStore() {
+            this.closeDrawer();
+            this.myStoreOpen = true;
+        },
+        canDeleteMessage(m) {
+            if (!this.currentUser) return false;
+            if (this.currentUserIsAdmin) return true;
+            if (this.currentUser.id === config.OWNER_ID) return true;
+            return this.currentUser.id === m.autorId;
+        },
+        async deleteThreadMessage(m) {
+            if (!confirm("Delete this message?")) return;
+            try {
+                const { error } = await sb.from("chat_mensajes").delete().eq("id", m.id);
+                if (error) throw error;
+                this.threadMessages = this.threadMessages.filter(x => x.id !== m.id);
+            } catch (err) {
+                console.error(err);
+                alert("Couldn't delete message.");
+            }
+        },
 /* ---------- Realtime chat ---------- */
 subscribeChat() {
     this.unsubscribeChat();
@@ -963,23 +1094,38 @@ subscribeChat() {
 
     this._chatChannel = sb
         .channel("chat:" + this.currentCourse)
-        .on("postgres_changes",
-            {
-                event: "INSERT",
-                schema: "public",
-                table: "chat_mensajes",
-                filter: `curso=eq.${this.currentCourse}`
-            },
-            (payload) => {
-                const m = data.mapChatMensaje(payload.new);
-                if (this.chatMessages.some(x => x.id === m.id)) return;
-                this.chatMessages.push(m);
-                this.$nextTick(() => {
-                    const f = this.$refs.chatFeed;
-                    if (f) f.scrollTop = f.scrollHeight;
-                });
+    .on("postgres_changes",
+        {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_mensajes",
+            filter: `curso=eq.${this.currentCourse}`
+        },
+        (payload) => {
+            const m = data.mapChatMensaje(payload.new);
+            if (m.parentId) {
+                if (!this._threadParents.includes(m.parentId)) {
+                    this._threadParents.push(m.parentId);
+                }
+                if (this.threadOpen && this.threadRoot && m.parentId === this.threadRoot.id) {
+                    if (!this.threadMessages.some(x => x.id === m.id)) {
+                        this.threadMessages.push(m);
+                        this.$nextTick(() => {
+                            const f = this.$refs.threadFeed;
+                            if (f) f.scrollTop = f.scrollHeight;
+                        });
+                    }
+                }
+                return;
             }
-        )
+            if (this.chatMessages.some(x => x.id === m.id)) return;
+            this.chatMessages.push(m);
+            this.$nextTick(() => {
+                const f = this.$refs.chatFeed;
+                if (f) f.scrollTop = f.scrollHeight;
+            });
+        }
+    )
         .on("postgres_changes",
             {
                 event: "DELETE",

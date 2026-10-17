@@ -590,6 +590,20 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     .timeline-item.chain-end{ margin-bottom:12px; }
 }
 
+/* Mobile: students carousel bleeds to screen edge */
+@media (max-width: 900px) {
+    .fs-section:has(.carousel-container) {
+        margin-left: -18px;
+        margin-right: -18px;
+    }
+    .carousel-container {
+        padding: 0;
+    }
+    .fs-section:has(.carousel-container) .cards-estudiantes {
+        padding: 6px 0 6px 18px;
+    }
+}
+
 /* ============================================================
    LEGACY: mensajes / announcements
    No se usan en las páginas actuales, pero se conservan para
@@ -853,4 +867,12 @@ table.horario td.libre-cell{ color:var(--on-surface-var); font-style:italic; fon
     border-radius:10px;
     margin:4px 0;
     display:block;
+}
+
+/* Mobile: gallery bleeds to screen edge */
+@media (max-width: 900px) {
+    .fs-section:has(.galeria-viewport) {
+        margin-left: -18px;
+        margin-right: -18px;
+    }
 }

@@ -23,6 +23,7 @@ createApp({
             materias: [],
             horarios: [],           // flat mapped rows
             galeriaLocal: [],
+            galeriaFotos: [],
 
             /* Constantes */
             days: config.DAYS,
@@ -83,6 +84,10 @@ createApp({
         galeriaDelCurso() {
             if (!this.selectedCourse) return this.galeriaLocal;
             return this.galeriaLocal.filter(g => g.curso === this.selectedCourse);
+        },
+        galeriaFotosDelCurso() {
+            if (!this.selectedCourse) return this.galeriaFotos;
+            return this.galeriaFotos.filter(g => g.curso === this.selectedCourse);
         },
         franjasDelCurso() {
             if (!this.selectedCourse) return [];
@@ -152,6 +157,21 @@ createApp({
                 this.horarios = core.horarios;         // flat, camelCase
                 this.galeriaLocal = core.galeria;
 
+                try {
+                    const { data: gf } = await sb.from("galeria_fotos")
+                        .select("*").order("fecha", { ascending: false });
+                    this.galeriaFotos = (gf || []).map(row => ({
+                        id: row.id,
+                        curso: row.curso,
+                        url: data.galeriaUrl(sb, row.storage_path),
+                        storagePath: row.storage_path,
+                        subidoPorNombre: row.subido_por_nombre,
+                        fecha: row.fecha
+                    }));
+                } catch (err) {
+                    console.warn("[Admin] Error loading uploaded photos:", err);
+                    this.galeriaFotos = [];
+                }
                 if (this.currentUser) {
                     const me = this.estudiantes.find(e => e.id === this.currentUser.id);
                     if (me) this.currentUserIsAdmin = !!me.isAdmin;
@@ -518,6 +538,19 @@ createApp({
                 const { error } = await sb.from("galeria_local").delete().eq("id", g.id);
                 if (error) throw error;
                 this.galeriaLocal = this.galeriaLocal.filter(x => x.id !== g.id);
+                this.showSnackbar("Photo deleted");
+            } catch (err) {
+                console.error(err);
+                this.showSnackbar("Error deleting photo", "error");
+            }
+        },
+        async deleteGaleriaFotoUpload(f) {
+            if (!confirm("Delete this uploaded photo?")) return;
+            try {
+                await sb.storage.from(config.BUCKETS.GALERIA).remove([f.storagePath]);
+                const { error } = await sb.from("galeria_fotos").delete().eq("id", f.id);
+                if (error) throw error;
+                this.galeriaFotos = this.galeriaFotos.filter(x => x.id !== f.id);
                 this.showSnackbar("Photo deleted");
             } catch (err) {
                 console.error(err);

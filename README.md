@@ -2,23 +2,30 @@
 
 Plataforma escolar con Vue 3 + Supabase. Cinco secciones:
 
-- **Courses** (`index.html`) — horarios, tutor, estudiantes, galería, chat
+- **Courses** (`index.html`) — horarios, tutor, estudiantes, galería, chat en vivo
 - **Admin** (`admin.html`) — CRUD de cursos, estudiantes, profesores, materias, horarios, galería
-- **Secrets** (`secrets.html`) — feed anónimo estilo Discord
+- **Secrets** (`secrets.html`) — feed anónimo estilo Discord, con hilos y realtime
 - **Store** (`store.html`) — feed público de emprendimientos
-- **My Store** (`my-store.html`) — editor del emprendimiento propio
+- **My Store** (`my-store.html`) — editor standalone del emprendimiento propio (también disponible como modal `MyStoreModal` desde cualquier página)
 
 ---
 
 ## Estructura
 /
-├── index.html, admin.html, secrets.html, store.html, my-store.html
-├── data/supabase-config.js
+├── index.html Courses
+├── admin.html Admin panel
+├── secrets.html Secrets feed
+├── store.html Store público
+├── my-store.html My Store (standalone)
+├── in-the-pool.mp3 🎵 Música del login (ver §Música)
+├── reze.png Mascota del login
+├── data/
+│ └── supabase-config.js
 ├── css/
 │ ├── identity.css tokens + animaciones compartidas
 │ ├── base.css reset, body, botones, forms
 │ ├── login.css login screen
-│ ├── components.css drawer, modals, photo-slot, user-chips, image-viewer
+│ ├── components.css drawer, modals, photo-slot, profile, image-viewer
 │ ├── course.css tutor, horarios, students, gallery, student modal
 │ ├── chat.css panel de chat
 │ ├── admin.css panel de administración
@@ -30,9 +37,11 @@ Plataforma escolar con Vue 3 + Supabase. Cinco secciones:
 │ ├── utils.js funciones puras (normalize, shortName, …)
 │ ├── auth.js sesión + login/logout
 │ ├── data.js mappers + loaders de Supabase
-│ └── ui.js eye-toggle, GIF loader, bootstrap
+│ └── ui.js eye-toggle, reze text, música, bootstrap
 ├── components/
-│ └── PhotoSlot.js componente Vue de foto con fallback
+│ ├── PhotoSlot.js foto con fallback
+│ ├── ProfileModal.js perfil (ver / editar / archivos)
+│ └── MyStoreModal.js editor de tienda (modal)
 ├── app.js
 ├── admin.js
 ├── secrets.js
@@ -81,7 +90,11 @@ create table estudiantes (
     nivel_ingles text default '',
     cargo text default '',
     is_admin boolean default false,
-    has_store boolean default false
+    has_store boolean default false,
+    instagram text default '',
+    tiktok text default '',
+    whatsapp text default '',
+    spotify text default ''
 );
 alter table estudiantes enable row level security;
 create policy "cualquiera puede leer estudiantes"   on estudiantes for select using (true);
@@ -172,7 +185,7 @@ create policy "cualquiera puede leer galeria_local"   on galeria_local for selec
 create policy "cualquiera puede editar galeria_local" on galeria_local for all    using (true) with check (true);
 
 -- ============================================================
--- ARCHIVOS (documentos subidos por estudiantes)
+-- ARCHIVOS (documentos de materia subidos por estudiantes)
 -- ============================================================
 create table archivos (
     id bigint generated always as identity primary key,
@@ -190,6 +203,22 @@ create policy "cualquiera puede subir archivos"  on archivos for insert with che
 create policy "cualquiera puede borrar archivos" on archivos for delete using (true);
 
 -- ============================================================
+-- PROFILE ARCHIVOS (documentos adjuntos al perfil del estudiante)
+-- Usa el mismo bucket `archivos`, path: profiles/{id}/…
+-- ============================================================
+create table profile_archivos (
+    id bigint generated always as identity primary key,
+    estudiante_id bigint references estudiantes(id) on delete cascade,
+    nombre text not null,
+    storage_path text not null,
+    fecha timestamptz default now()
+);
+alter table profile_archivos enable row level security;
+create policy "profile_archivos - leer"   on profile_archivos for select using (true);
+create policy "profile_archivos - subir"  on profile_archivos for insert with check (true);
+create policy "profile_archivos - borrar" on profile_archivos for delete using (true);
+
+-- ============================================================
 -- GALERÍA FOTOS (subidas por estudiantes desde Courses)
 -- ============================================================
 create table galeria_fotos (
@@ -205,7 +234,7 @@ create policy "cualquiera puede leer galeria_fotos"  on galeria_fotos for select
 create policy "cualquiera puede subir galeria_fotos" on galeria_fotos for insert with check (true);
 
 -- ============================================================
--- CHAT
+-- CHAT (mensajes del curso + hilos)
 -- ============================================================
 create table chat_mensajes (
     id bigint generated always as identity primary key,
@@ -214,6 +243,8 @@ create table chat_mensajes (
     autor_nombre text,
     mensaje text not null,
     comprimido boolean default false,
+    reply_to_id bigint,
+    parent_id bigint,                    -- id del mensaje raíz del hilo
     fecha timestamptz default now()
 );
 alter table chat_mensajes enable row level security;
@@ -222,7 +253,7 @@ create policy "cualquiera puede subir chat"  on chat_mensajes for insert with ch
 create policy "cualquiera puede borrar chat" on chat_mensajes for delete using (true);
 
 -- ============================================================
--- SECRETS
+-- SECRETS (feed anónimo + hilos)
 -- ============================================================
 create table secrets (
     id bigint generated always as identity primary key,
@@ -230,6 +261,8 @@ create table secrets (
     autor_nombre text,
     anonimo boolean default false,
     mensaje text not null,
+    reply_to_id bigint,
+    parent_id bigint,
     fecha timestamptz default now()
 );
 alter table secrets enable row level security;
@@ -252,7 +285,7 @@ create table tareas (
     fecha timestamptz default now()
 );
 alter table tareas enable row level security;
-create policy "cualquiera puede leer tareas"   on tareas for select using (true);
+create policy "cualquiera puede leer tareas"    on tareas for select using (true);
 create policy "cualquiera puede agregar tareas" on tareas for insert with check (true);
 
 -- ============================================================
@@ -296,15 +329,29 @@ create table store_photos (
 alter table store_photos enable row level security;
 create policy "cualquiera puede leer store_photos"   on store_photos for select using (true);
 create policy "cualquiera puede editar store_photos" on store_photos for all    using (true) with check (true);
+Si ya tenías el schema de una versión anterior
+Ejecutá solo los ALTER TABLE que falten:
+
+sql
+alter table estudiantes    add column if not exists instagram text default '';
+alter table estudiantes    add column if not exists tiktok    text default '';
+alter table estudiantes    add column if not exists whatsapp  text default '';
+alter table estudiantes    add column if not exists spotify   text default '';
+alter table chat_mensajes  add column if not exists reply_to_id bigint;
+alter table chat_mensajes  add column if not exists parent_id   bigint;
+alter table secrets        add column if not exists reply_to_id bigint;
+alter table secrets        add column if not exists parent_id   bigint;
+
+-- Y correr el CREATE TABLE de `profile_archivos` de arriba.
 3. Crear los buckets de Storage
-En Storage → New bucket → activar Public bucket → Create:
+Storage → New bucket → activar Public bucket → Create:
 
 Bucket	Uso
-archivos	documentos de materias
+archivos	documentos de materias y archivos de perfil (profiles/{id}/…)
 galeria	fotos subidas por estudiantes
 media	fotos de estudiantes y profesores
 stores	imágenes de la tienda
-Después, en SQL Editor, crear las políticas de Storage para cada bucket:
+Después, en SQL Editor, crear las políticas de Storage:
 
 sql
 -- archivos
@@ -332,12 +379,36 @@ Project URL → pegar en SUPABASE_URL de data/supabase-config.js
 
 anon public key → pegar en SUPABASE_ANON_KEY de data/supabase-config.js
 
+Realtime
+El chat y los secrets usan Supabase Realtime para actualizarse en vivo. Es un paso extra, una sola vez:
+
+SQL Editor → New query → Run:
+
+sql
+alter publication supabase_realtime add table chat_mensajes;
+alter publication supabase_realtime add table secrets;
+alter publication supabase_realtime add table galeria_fotos;
+Verificá en Database → Replication → supabase_realtime que aparezcan las 3 tablas. Sin esto, los canales conectan (SUBSCRIBED) pero no llega ningún evento.
+
+🎵 Música del login
+La pantalla de login reproduce "In the Pool" de Kensuqui Uquio en loop:
+
+Descargá el .mp3 de la canción.
+
+Renombralo exactamente a in-the-pool.mp3.
+
+Ponelo en la raíz del proyecto (al mismo nivel que index.html).
+
+Los navegadores modernos bloquean el autoplay con sonido. El código lo intenta al cargar y, si falla, espera el primer click/tecla del usuario (que suele ser el propio botón de login). Hay un botoncito abajo a la derecha para pausar/reanudar, y la música se pausa automáticamente al entrar a la app y se reanuda al volver al login.
+
+Si no ponés el archivo, el botón de música se oculta automáticamente y no rompe nada.
+
 Notas de seguridad
-Las políticas RLS son abiertas (using (true)) porque no hay backend verificando identidad: el login es puramente client-side (usuario + fecha de nacimiento). Es un riesgo aceptable para un proyecto de compañeros de curso, pero:
+Las políticas RLS son abiertas (using (true)) porque no hay backend verificando identidad: el login es puramente client-side (usuario derivado del nombre + fecha de nacimiento). Es un riesgo aceptable para un proyecto de compañeros de curso, pero:
 
-Cualquiera con conocimientos técnicos puede leer/escribir/borrar en la DB
+Cualquiera con conocimientos técnicos puede leer/escribir/borrar en la DB.
 
-El "botón de borrar" en el frontend solo se muestra al autor, pero no es una garantía
+El "botón de borrar" en el frontend solo se muestra al autor, pero no es una garantía.
 
 Para producción real habría que migrar a Supabase Auth con email + contraseña.
 
@@ -351,98 +422,93 @@ python3 -m http.server 8000
 npx serve .
 Abrir http://localhost:8000.
 
-text
+⚠️ No abrir los HTML con file:// directamente: fetch/Supabase y el <audio> pueden fallar por CORS.
+
+🧪 Cómo probar
+Chat:
+
+Abrí index.html en dos pestañas con la misma cuenta.
+
+En ambas, entrá al mismo curso y abrí el chat.
+
+En una, mandá un mensaje.
+
+En la otra debe aparecer sin recargar, en menos de 1 segundo.
+
+Borralo en una pestaña → desaparece en la otra.
+
+En DevTools de cualquiera, buscá en consola: [Chat] Realtime conectado: <curso>.
+
+Secrets:
+
+Abrí secrets.html en dos pestañas.
+
+Mandá un secret desde una.
+
+Aparece en la otra al toque.
+
+Borralo → desaparece en ambas.
+
+Profile (archivos):
+
+Abrí el perfil en modo edición (drawer → Profile).
+
+En la sección Files podés:
+
+Arrastrar uno o varios archivos al área → sube en serie.
+
+Usar el botón Agregar archivo (acepta múltiples).
+
+Ver la lista con descargar (click en el nombre) y borrar.
+
+Al cerrar y abrir el perfil de otro usuario en vista, solo ves sus archivos (sin botones de edición).
+
+Login + música:
+
+Cerrá sesión o abrí sin sesión.
+
+La tarjeta queda a la izquierda, Reze a la derecha centrada (≥ 900 px).
+
+La música arranca sola si el navegador lo permite; si no, en el primer click.
+
+El botón de música (esquina inferior derecha) alterna play/pausa.
+
+Debug realtime si no llega:
+
+La consola debe decir [Chat] Realtime conectado: X. Si dice CHANNEL_ERROR, no habilitaste la tabla en la publicación (§Realtime).
+
+En Network → WS debe haber un WebSocket abierto a *.supabase.co/realtime/v1/websocket.
+
+En Supabase → Realtime Inspector podés ver los eventos entrando en tiempo real.
+
+⚠️ Lo que no cubre
+Notificaciones: si el usuario está en otra página o pestaña, no se entera de mensajes nuevos. Requeriría un badge global o Web Notifications API.
+
+Indicador de conexión: si se cae el WebSocket, Supabase intenta reconectar solo, pero no hay puntito visual de "conectado/desconectado" en el header del chat.
+
+Galería en vivo: el SQL de Realtime la incluye, pero app.js no tiene el subscribe para galeria_fotos. Es un cambio de ~15 líneas si querés después.
+
+✅ Próximos pasos posibles
+Galería en vivo (subscribe a galeria_fotos).
+
+Notificaciones en el topbar cuando alguien escribe.
+
+Migración a Supabase Auth (login con email/contraseña real).
+
+Adjuntar imágenes en el chat.
 
 ---
 
-## 📄 `data/supabase-config.js`
+## Qué cambió respecto al README anterior
 
-```javascript
-/* ============================================================
-   Oasis · Supabase client
-   ------------------------------------------------------------
-   Rellena SUPABASE_URL y SUPABASE_ANON_KEY con los valores de
-   tu proyecto. El SQL de setup completo está en README.md.
-   ============================================================ */
-
-const SUPABASE_URL      = "https://mupdiqlibvhvckcoqprp.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cGRpcWxpYnZodmNrY29xcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDQ4NDksImV4cCI6MjEwMDMyMDg0OX0.KI1OdPh9dXKk2DGyNwb8Cfmu1usClbzbx8Zoy1X4V8A";
-
-/**
- * Cliente compartido. La librería del CDN se auto-registra como
- * `window.supabase`. A NUESTRO cliente (ya instanciado) lo llamamos
- * `supabaseClient` para no pisarla.
- *
- * Es un binding léxico global: todos los scripts cargados después
- * pueden leerlo directamente con `supabaseClient`, sin pasar por
- * `window.supabaseClient`.
- */
-let supabaseClient = null;
-
-if (
-    !SUPABASE_URL.includes("TU_PROYECTO") &&
-    window.supabase &&
-    typeof window.supabase.createClient === "function"
-) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else {
-    console.warn(
-        "[Oasis] Supabase no está configurado — revisá data/supabase-config.js"
-    );
-}
-
-## Realtime
-
-El chat y los secrets usan **Supabase Realtime** para actualizarse en vivo. Es un paso extra en Supabase, una sola vez:
-
-**SQL Editor → New query → Run:**
-
-```sql
-alter publication supabase_realtime add table chat_mensajes;
-alter publication supabase_realtime add table secrets;
-alter publication supabase_realtime add table galeria_fotos;
-Verificá en Database → Replication → supabase_realtime que aparezcan las 3 tablas.
-
-Sin esto, los canales conectan (SUBSCRIBED) pero no llega ningún evento.
-
-text
-
----
-
-## 🧪 Cómo probar que funciona
-
-**Chat:**
-1. Abrí `index.html` en **dos pestañas** (o dos navegadores) con la **misma cuenta**.
-2. En ambas, entrá al mismo curso y abrí el chat.
-3. En una, mandá un mensaje.
-4. En la otra, debe aparecer **sin recargar**, en menos de 1 segundo.
-5. Borrá el mensaje en una pestaña → desaparece en la otra.
-6. En DevTools de cualquiera, buscá en consola: `[Chat] Realtime conectado: <curso>`.
-
-**Secrets:**
-1. Abrí `secrets.html` en dos pestañas.
-2. Mandá un secret desde una.
-3. Aparece en la otra al toque.
-4. Borralo → desaparece en ambas.
-
-**Debug si no llega:**
-- Consola del navegador debe decir `[Chat] Realtime conectado: X`. Si dice `CHANNEL_ERROR`, no habilitaste la tabla en la publicación (Paso 0).
-- En **Network → WS**, debe haber un WebSocket abierto a `*.supabase.co/realtime/v1/websocket`.
-- En **Supabase → Realtime Inspector** podés ver los eventos entrando en tiempo real.
-
----
-
-## ⚠️ Lo que **no** cubre este cambio
-
-- **Notificaciones**: si el usuario está en otra página o pestaña, no se entera. Eso requiere un badge global o Web Notifications API.
-- **Reconnect visual**: si se cae la conexión, Supabase intenta reconectar solo, pero no hay indicador visual. Se puede agregar un puntito "conectado/desconectado" en el header del chat si querés.
-- **Galería en vivo**: dejé la SQL para habilitarla, pero no implementé el `subscribe` en `app.js` para las fotos. Es un cambio de 15 líneas si querés después.
-
----
-
-## ✅ Después de probar
-
-Contame si el chat y secrets se actualizan en vivo. Si funciona → próximos pasos posibles:
-- Galería en vivo (subscribe a `galeria_fotos`)
-- Notificaciones en el topbar cuando alguien escribe
-- Migración a Supabase Auth (login con email/contraseña real)
+| Cambio | Motivo |
+|---|---|
+| `estudiantes` ahora tiene `instagram`, `tiktok`, `whatsapp`, `spotify` | `ProfileModal` los lee/escribe. Sin esas columnas falla el guardado. |
+| `secrets` y `chat_mensajes` ahora tienen `reply_to_id` y `parent_id` | Ya los usaba el código (hilos y respuestas), pero el SQL del README no los creaba. |
+| Nueva tabla `profile_archivos` | Feature nueva del perfil. |
+| Sección de `ALTER TABLE` para migrar de la versión vieja | Para no tener que recrear la DB. |
+| Bucket `archivos` documentado también para perfiles (`profiles/{id}/…`) | Reutilizamos el mismo bucket, no hace falta uno nuevo. |
+| Nueva sección **Música del login** | Explica el `.mp3` y el comportamiento del autoplay. |
+| Estructura actualizada con `ProfileModal.js` y `MyStoreModal.js` | Existían pero no estaban en el árbol. |
+| Prueba nueva de **Profile (archivos)** y **Login + música** | Para verificar los features recién agregados. |
+| `my-store.html` documentado como *standalone* + también disponible como `MyStoreModal` | Ambas formas existen en el proyecto. |

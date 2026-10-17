@@ -1,40 +1,70 @@
 /* ============================================================
-   Oasis · Login screen
-   ------------------------------------------------------------
-   Pantalla de login compartida. Se usa el mismo HTML en las 5
-   páginas (#loginScreen con los IDs estándar). El eye-toggle
-   y el GIF de fondo los maneja js/shared/ui.js.
+   Oasis · Login screen (wave + reze)
    ============================================================ */
 
 .login-screen {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: var(--bg);
+    background: #0a0a0c;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 .login-screen.hidden { display: none; }
 
-.login-wordmark {
-    font-family: 'Varela Round', sans-serif;
-    font-size: 44px;
-    letter-spacing: 1.5px;
-    color: var(--primary);
+/* ===== Reze side panel (desktop only) ===== */
+
+.login-side {
+    position: absolute;
+    top: 50%;
+    right: 8vw;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    pointer-events: none;
     text-align: center;
-    margin: 48px 0 28px;
-    animation: id-fade-in 0.6s ease-out;
 }
 
+.login-reze {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    animation: rezeFloat 4s ease-in-out infinite;
+    filter: drop-shadow(0 12px 40px rgba(142, 125, 212, 0.35));
+}
+
+@keyframes rezeFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-14px); }
+}
+
+.login-reze-text {
+    font-size: 12px;
+    color: var(--on-surface-var);
+    line-height: 1.5;
+    max-width: 240px;
+    min-height: 36px;
+    transition: opacity .4s ease;
+    opacity: 1;
+}
+
+/* ===== Form sheet ===== */
+
 .login-sheet {
+    position: relative;
+    z-index: 2;
     flex: 1;
     width: 100%;
-    background: var(--surface);
+    background: rgba(28, 27, 31, 0.72);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-top-left-radius: var(--radius-xl);
     border-top-right-radius: var(--radius-xl);
     padding: 40px 24px;
@@ -179,7 +209,7 @@
 }
 .login-remember input:checked + span{ color: var(--primary); }
 
-/* ===== Fallback login form (modal, legacy) ===== */
+/* ===== Fallback login form (modal legacy) ===== */
 .login-form{ display:flex; flex-direction:column; gap:12px; margin-top:22px; text-align:left; }
 .login-form input{
     background:var(--surface-1); border:1px solid var(--outline);
@@ -189,74 +219,75 @@
 .login-form input::placeholder{ color:var(--on-surface-var); }
 .login-error{ color:#ff8a8a; font-size:12.5px; text-align:center; }
 
-/* ===== Responsive ===== */
-@media (max-width: 380px) {
-    .login-wordmark { font-size: 36px; margin: 32px 0 20px; }
-    .login-sheet    { padding: 32px 20px; }
-    .login-form-title { font-size: 24px; }
-    .login-field-input,
-    .login-btn { height: 48px; }
-}
+/* ===== Desktop layout ===== */
 
 @media (min-width: 720px) {
     .login-screen {
-        justify-content: center;
+        flex-direction: row;
+        justify-content: flex-start;
         align-items: center;
-        padding: 0;
-        background-color: #0a0a0c;
-        background-image:
-            linear-gradient(rgba(8, 8, 12, 0.68), rgba(8, 8, 12, 0.82)),
-            var(--login-bg, none);
-        background-size: cover, cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
+        padding: 0 8vw 0 10vw;
+        gap: 40px;
     }
-
-    .login-screen .login-wordmark {
-        font-size: 64px;
-        text-align: center;
-        align-self: center;
-        margin: 0 0 28px;
-    }
-
     .login-sheet {
         flex: 0 0 auto;
-        width: 100%;
         max-width: 400px;
         padding: 40px 36px 34px;
-        margin: 0;
         background: rgba(20, 20, 26, 0.72);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
         border: 1px solid rgba(255,255,255,.09);
         border-radius: 28px;
         box-shadow: 0 30px 90px rgba(0,0,0,.6);
+        align-self: center;
     }
-
-    .login-sheet .login-form-wrap { padding: 0; }
-    .login-form-title { font-size: 24px; text-align: left; }
+    .login-form-title { font-size: 24px; }
     .login-field-label { text-align: left; }
-
-    .login-screen{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
 }
 
-@media (min-width: 720px) {
-    .login-screen {
-        justify-content: flex-start;
-        align-items: flex-start;
-        padding-left: 8vw;
-        padding-top: 10vh;
-        will-change: background-image;
-    }
-
+@media (min-width: 900px) {
     .login-sheet {
-        margin: 0;
-        align-self: flex-start;
+        order: 1;              /* la tarjeta va primero (izquierda) */
+    }
+    .login-side {
+        order: 2;              /* Reze va después (derecha) */
+        display: flex;
+        position: static;
+        transform: none;
+        flex: 1;               /* ocupa todo el espacio restante */
+        justify-content: center;  /* Reze centrada dentro de ese espacio */
+        align-items: center;
+        flex-direction: column;
+        gap: 16px;
     }
 }
+
+/* ===== Music toggle (login) ===== */
+.login-music {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 5;
+}
+.login-music-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    border: 1px solid var(--outline);
+    color: var(--on-surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: .2s;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.login-music-btn:hover {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    border-color: transparent;
+}
+.login-music-btn.playing {
+    background: var(--primary);
+    color: var(--on-primary);
+    border-color: transparent;
+}
+.login-music-btn svg { width: 20px; height: 20px; }
