@@ -372,6 +372,8 @@ create policy "media - borrar" on storage.objects for delete using (bucket_id = 
 create policy "stores - leer"   on storage.objects for select using (bucket_id = 'stores');
 create policy "stores - subir"  on storage.objects for insert with check (bucket_id = 'stores');
 create policy "stores - borrar" on storage.objects for delete using (bucket_id = 'stores');
+```
+
 4. Configurar las credenciales
 En Project Settings → Data API, copiar:
 
@@ -391,7 +393,7 @@ alter publication supabase_realtime add table galeria_fotos;
 Verificá en Database → Replication → supabase_realtime que aparezcan las 3 tablas. Sin esto, los canales conectan (SUBSCRIBED) pero no llega ningún evento.
 
 🎵 Música del login
-La pantalla de login reproduce "In the Pool" de Kensuqui Uquio en loop:
+La pantalla de login reproduce "In the Pool" de kensuke ushio en loop:
 
 Descargá el .mp3 de la canción.
 
