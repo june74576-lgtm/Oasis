@@ -1,5 +1,9 @@
 # Oasis
 
+<div>
+  <img src="logo.png" width="120" />
+</div><br>
+
 Plataforma escolar con Vue 3 + Supabase. Cinco secciones:
 
 - **Courses** (`index.html`) — horarios, tutor, estudiantes, galería, chat en vivo
