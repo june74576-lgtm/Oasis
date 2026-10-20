@@ -15,6 +15,8 @@ Plataforma escolar con Vue 3 + Supabase. Cinco secciones:
 ---
 
 ## Estructura
+
+```
 /
 ├── index.html Courses
 ├── admin.html Admin panel
@@ -51,8 +53,7 @@ Plataforma escolar con Vue 3 + Supabase. Cinco secciones:
 ├── secrets.js
 ├── store.js
 └── my-store.js
-
-text
+```
 
 ---
 
